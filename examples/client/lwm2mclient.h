@@ -108,4 +108,21 @@ char * get_server_uri(lwm2m_object_t * objectP, uint16_t secObjInstID);
 void display_security_object(lwm2m_object_t * objectP);
 void copy_security_object(lwm2m_object_t * objectDest, lwm2m_object_t * objectSrc);
 
+typedef struct
+{
+    lwm2m_object_t * securityObjP;
+    lwm2m_object_t * serverObject;
+    lwm2m_context_t * ctx;
+#ifndef WITH_MBEDTLS
+    int sock;
+#ifdef WITH_TINYDTLS
+    dtls_connection_t * connList;
+    lwm2m_context_t * lwm2mH;
+#else
+    connection_t * connList;
+#endif
+#endif
+    int addressFamily;
+} client_data_t;
+
 #endif /* LWM2MCLIENT_H_ */

@@ -60,8 +60,9 @@
 #include "liblwm2m.h"
 #include "commandline.h"
 #ifdef WITH_TINYDTLS
-#include "dtlsconnection.h"
-#else
+#include "tinydtlsconnection.h"
+#elif defined(WITH_MBEDTLS)
+#include "mbedtlsconnection.h"
 #include "connection.h"
 #endif
 
@@ -94,20 +95,6 @@ lwm2m_object_t * objArray[OBJ_COUNT];
 // only backup security and server objects
 # define BACKUP_OBJECT_COUNT 2
 lwm2m_object_t * backupObjectArray[BACKUP_OBJECT_COUNT];
-
-typedef struct
-{
-    lwm2m_object_t * securityObjP;
-    lwm2m_object_t * serverObject;
-    int sock;
-#ifdef WITH_TINYDTLS
-    dtls_connection_t * connList;
-    lwm2m_context_t * lwm2mH;
-#else
-    connection_t * connList;
-#endif
-    int addressFamily;
-} client_data_t;
 
 static void prv_quit(lwm2m_context_t * lwm2mH,
                      char * buffer,
@@ -204,7 +191,7 @@ void handle_value_changed(lwm2m_context_t * lwm2mH,
         fprintf(stderr, "Object not found !\n");
     }
 }
-
+#ifndef WITH_MBEDTLS
 #ifdef WITH_TINYDTLS
 void * lwm2m_connect_server(uint16_t secObjInstID,
                             void * userData)
@@ -328,6 +315,7 @@ void lwm2m_close_connection(void * sessionH,
         }
     }
 }
+#endif
 
 static void prv_output_servers(lwm2m_context_t * lwm2mH,
                                char * buffer,
@@ -652,27 +640,6 @@ static void prv_remove(lwm2m_context_t * lwm2mH,
     return;
 }
 
-#ifdef LWM2M_BOOTSTRAP
-
-static void prv_initiate_bootstrap(lwm2m_context_t * lwm2mH,
-                                   char * buffer,
-                                   void * user_data)
-{
-    lwm2m_server_t * targetP;
-
-    /* unused parameter */
-    (void)user_data;
-
-    // HACK !!!
-    lwm2mH->state = STATE_BOOTSTRAP_REQUIRED;
-    targetP = lwm2mH->bootstrapServerList;
-    while (targetP != NULL)
-    {
-        targetP->lifetime = 0;
-        targetP = targetP->next;
-    }
-}
-
 static void prv_display_objects(lwm2m_context_t * lwm2mH,
                                 char * buffer,
                                 void * user_data)
@@ -712,6 +679,27 @@ static void prv_display_objects(lwm2m_context_t * lwm2mH,
                 break;
             }
         }
+    }
+}
+
+#ifdef LWM2M_BOOTSTRAP
+
+static void prv_initiate_bootstrap(lwm2m_context_t * lwm2mH,
+                                   char * buffer,
+                                   void * user_data)
+{
+    lwm2m_server_t * targetP;
+
+    /* unused parameter */
+    (void)user_data;
+
+    // HACK !!!
+    lwm2mH->state = STATE_BOOTSTRAP_REQUIRED;
+    targetP = lwm2mH->bootstrapServerList;
+    while (targetP != NULL)
+    {
+        targetP->lifetime = 0;
+        targetP = targetP->next;
     }
 }
 
@@ -856,7 +844,7 @@ void print_usage(void)
     fprintf(stdout, "  -c\t\tChange battery level over time.\r\n");
     fprintf(stdout, "  -S BYTES\tCoAP block size. Options: 16, 32, 64, 128, 256, 512, 1024. Default: %" PRIu16 "\r\n",
             LWM2M_COAP_DEFAULT_BLOCK_SIZE);
-#ifdef WITH_TINYDTLS
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     fprintf(stdout, "  -i STRING\tSet the device management or bootstrap server PSK identity. If not set use none secure mode\r\n");
     fprintf(stdout, "  -s HEXSTRING\tSet the device management or bootstrap server Pre-Shared-Key. If not set use none secure mode\r\n");
 #endif
@@ -884,7 +872,7 @@ int main(int argc, char *argv[])
 #endif
 
     char * pskId = NULL;
-#ifdef WITH_TINYDTLS
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     char * psk = NULL;
 #endif
     uint16_t pskLen = -1;
@@ -957,7 +945,7 @@ int main(int argc, char *argv[])
                 return 0;
             }
             break;
-#ifdef WITH_TINYDTLS
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
         case 'i':
             opt++;
             if (opt >= argc)
@@ -1043,6 +1031,7 @@ int main(int argc, char *argv[])
         server = (AF_INET == data.addressFamily ? DEFAULT_SERVER_IPV4 : DEFAULT_SERVER_IPV6);
     }
 
+#ifndef WITH_MBEDTLS
     /*
      *This call an internal function that create an IPV6 socket on the port 5683.
      */
@@ -1053,12 +1042,13 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to open socket: %d %s\r\n", errno, strerror(errno));
         return -1;
     }
+#endif
 
     /*
      * Now the main function fill an array with each object, this list will be later passed to liblwm2m.
      * Those functions are located in their respective object file.
      */
-#ifdef WITH_TINYDTLS
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     if (psk != NULL)
     {
         pskLen = strlen(psk) / 2;
@@ -1092,7 +1082,7 @@ int main(int argc, char *argv[])
 
     char serverUri[50];
     int serverId = 123;
-#ifdef WITH_TINYDTLS
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     sprintf (serverUri, "coaps://%s:%s", server, serverPort);
 #else
     sprintf (serverUri, "coap://%s:%s", server, serverPort);
@@ -1190,6 +1180,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "lwm2m_init() failed\r\n");
         return -1;
     }
+    data.ctx = lwm2mH;
 
     /*
      * We configure the liblwm2m library with the name of the client - which shall be unique for each client -
@@ -1254,7 +1245,17 @@ int main(int argc, char *argv[])
         tv.tv_usec = 0;
 
         FD_ZERO(&readfds);
+#ifndef WITH_MBEDTLS
         FD_SET(data.sock, &readfds);
+#else
+        int sockSize = 0;
+        int * socks = mbedtls_get_sockets(lwm2mH, &sockSize);
+        if(socks != NULL) {
+            for(int i = 0; i < sockSize; i++) {
+                FD_SET(socks[i], &readfds);
+            }
+        }
+#endif
         FD_SET(STDIN_FILENO, &readfds);
 
         /*
@@ -1291,6 +1292,7 @@ int main(int argc, char *argv[])
         }
         if (result != 0)
         {
+#ifdef LWM2M_BOOTSTRAP
             fprintf(stderr, "lwm2m_step() failed: 0x%X\r\n", result);
             if(previousState == STATE_BOOTSTRAPPING)
             {
@@ -1301,6 +1303,9 @@ int main(int argc, char *argv[])
                 lwm2mH->state = STATE_INITIAL;
             }
             else return -1;
+#else
+        return -1;
+#endif
         }
 #ifdef LWM2M_BOOTSTRAP
         update_bootstrap_info(&previousState, lwm2mH);
@@ -1318,11 +1323,12 @@ int main(int argc, char *argv[])
               fprintf(stderr, "Error in select(): %d %s\r\n", errno, strerror(errno));
             }
         }
+
         else if (result > 0)
         {
             uint8_t buffer[MAX_PACKET_SIZE];
             int numBytes;
-
+#ifndef WITH_MBEDTLS
             /*
              * If an event happens on the socket
              */
@@ -1403,6 +1409,19 @@ int main(int argc, char *argv[])
              * If the event happened on the SDTIN
              */
             else if (FD_ISSET(STDIN_FILENO, &readfds))
+            #else
+            for(int i = 0; i < sockSize; i++) {
+                if(FD_ISSET(socks[i], &readfds)) {
+                    void * connection = NULL;
+                    numBytes = mbedtls_receive(lwm2mH, socks[i], buffer, MAX_PACKET_SIZE, &connection);
+                    if(numBytes > 0) {
+                        lwm2m_handle_packet(lwm2mH, buffer, numBytes, connection);
+                    }
+                }
+                lwm2m_free(socks);
+            }
+            if (FD_ISSET(STDIN_FILENO, &readfds))
+            #endif
             {
                 numBytes = read(STDIN_FILENO, buffer, MAX_PACKET_SIZE - 1);
 
@@ -1441,8 +1460,10 @@ int main(int argc, char *argv[])
 #endif
         lwm2m_close(lwm2mH);
     }
+#ifndef WITH_MBEDTLS
     close(data.sock);
     connection_free(data.connList);
+#endif
 
     clean_security_object(objArray[0]);
     lwm2m_free(objArray[0]);

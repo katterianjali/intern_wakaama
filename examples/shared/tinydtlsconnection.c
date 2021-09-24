@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "dtlsconnection.h"
+#include "tinydtlsconnection.h"
 #include "commandline.h"
 
 #define COAP_PORT "5683"
