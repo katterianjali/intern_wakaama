@@ -7,6 +7,11 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     enable_testing()
 endif()
 
-add_subdirectory(tests)
+if(DTLS_MBEDTLS)
+    message("Skipping tests")
+else()
+    message("Adding tests")
+    add_subdirectory(tests)
+endif()
 
 add_subdirectory(examples)

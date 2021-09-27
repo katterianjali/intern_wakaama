@@ -277,9 +277,14 @@ uint8_t lwm2m_buffer_send(void * sessionH,
     }while(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if(ret < 0) {
+#if defined(MBEDTLS_ERROR_C)
         char error_buf[200];
         mbedtls_strerror( ret, error_buf, 200 );
         printf("Last error was: -0x%04x - %s\n\n", (unsigned int) -ret, error_buf );
+#else 
+        printf("Last error was: -0x%04x\n\n", (unsigned int) -ret );
+#endif /* MBEDTLS_ERROR_C */
+     
     }
 
     return COAP_NO_ERROR;

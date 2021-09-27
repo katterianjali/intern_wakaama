@@ -36,7 +36,8 @@
 
 /* mbed TLS feature support */
 #define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
-#define MBEDTLS_SSL_PROTO_TLS1_2
+#define MBEDTLS_SSL_PROTO_DTLS	
+#define MBEDTLS_SSL_PROTO_TLS1_2	
 
 /* mbed TLS modules */
 #define MBEDTLS_AES_C
@@ -52,8 +53,15 @@
 #define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
 #define MBEDTLS_SSL_CLI_C
-#define MBEDTLS_SSL_SRV_C
+//#define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
+
+/* DTLS-specific settings */
+#define MBEDTLS_SSL_DTLS_HELLO_VERIFY
+#define MBEDTLS_SSL_DTLS_ANTI_REPLAY
+#define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
+
+#define MBEDTLS_TIMING_C
 
 /* Save RAM at the expense of ROM */
 #define MBEDTLS_AES_ROM_TABLES
