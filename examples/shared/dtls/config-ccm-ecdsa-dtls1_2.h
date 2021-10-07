@@ -35,7 +35,6 @@
 /* Other MBEDTLS_HAVE_XXX flags irrelevant for this configuration */
 
 /* mbed TLS feature support */
-#define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 #define MBEDTLS_SSL_PROTO_DTLS	
 #define MBEDTLS_SSL_PROTO_TLS1_2	
 
@@ -62,11 +61,44 @@
 
 #define MBEDTLS_TIMING_C
 
+#define MBEDTLS_FS_IO
+
+/* ECDHE-ECDSA Support */
+#define MBEDTLS_ECP_DP_SECP256R1_ENABLED
+#define MBEDTLS_ECP_DP_SECP384R1_ENABLED
+#define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+
+/* Public Key Crypto */
+#define MBEDTLS_ASN1_PARSE_C
+#define MBEDTLS_ASN1_WRITE_C
+#define MBEDTLS_BIGNUM_C
+#define MBEDTLS_ECDH_C
+#define MBEDTLS_ECDSA_C
+#define MBEDTLS_ECP_C
+#define MBEDTLS_ENTROPY_C
+#define MBEDTLS_OID_C
+#define MBEDTLS_PK_C
+#define MBEDTLS_PK_PARSE_C
+#define MBEDTLS_X509_CRT_PARSE_C
+#define MBEDTLS_X509_USE_C
+
+/* For test certificates */
+#define MBEDTLS_BASE64_C
+#define MBEDTLS_PEM_PARSE_C
+
+/* Save RAM by adjusting to our exact needs */
+#define MBEDTLS_MPI_MAX_SIZE    48 // 384-bit EC curve = 48 bytes
+
+/* Save RAM at the expense of speed, see ecp.h */
+#define MBEDTLS_ECP_WINDOW_SIZE        2
+#define MBEDTLS_ECP_FIXED_POINT_OPTIM  0
+
+/* Significant speed benefit at the expense of some ROM */
+#define MBEDTLS_ECP_NIST_OPTIM
+
+
 /* Save RAM at the expense of ROM */
 #define MBEDTLS_AES_ROM_TABLES
-
-/* Save some RAM by adjusting to your exact needs */
-#define MBEDTLS_PSK_MAX_LEN    16 /* 128-bits keys are generally enough */
 
 /*
  * You should adjust this to the exact number of sources you're using: default
@@ -74,16 +106,6 @@
  * Minimum is 2 for the entropy test suite.
  */
 #define MBEDTLS_ENTROPY_MAX_SOURCES 2
-
-/*
- * Use only CCM_8 ciphersuites, and
- * save ROM and a few bytes of RAM by specifying our own ciphersuite list
- */
-#define MBEDTLS_SSL_CIPHERSUITES                        \
-        MBEDTLS_TLS_PSK_WITH_AES_256_CCM_8,             \
-        MBEDTLS_TLS_PSK_WITH_AES_256_CCM,               \
-        MBEDTLS_TLS_PSK_WITH_AES_128_CCM_8,             \
-        MBEDTLS_TLS_PSK_WITH_AES_128_CCM
 
 /*
  * Save RAM at the expense of interoperability: do this only if you control

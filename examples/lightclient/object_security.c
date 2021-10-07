@@ -72,7 +72,7 @@ static uint8_t prv_get_value(lwm2m_data_t * dataP,
         lwm2m_data_encode_bool(targetP->isBootstrap, dataP);
         return COAP_205_CONTENT;
 
-    case LWM2M_SECURITY_SECURITY_ID:
+    case LWM2M_SECURITY_SECURITY_MODE_ID:
         lwm2m_data_encode_int(LWM2M_SECURITY_MODE_NONE, dataP);
         return COAP_205_CONTENT;
 
@@ -161,7 +161,7 @@ static uint8_t prv_security_read(lwm2m_context_t * contextP,
     {
         uint16_t resList[] = {LWM2M_SECURITY_URI_ID,
                               LWM2M_SECURITY_BOOTSTRAP_ID,
-                              LWM2M_SECURITY_SECURITY_ID,
+                              LWM2M_SECURITY_SECURITY_MODE_ID,
                               LWM2M_SECURITY_PUBLIC_KEY_ID,
                               LWM2M_SECURITY_SERVER_PUBLIC_KEY_ID,
                               LWM2M_SECURITY_SECRET_KEY_ID,

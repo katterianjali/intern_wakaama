@@ -499,7 +499,7 @@ static int prv_add_server(bs_info_t * infoP,
     lwm2m_data_encode_int(dataP->id, serverP->securityData + 2);
 
     // Security Mode
-    serverP->securityData[3].id = LWM2M_SECURITY_SECURITY_ID;
+    serverP->securityData[3].id = LWM2M_SECURITY_SECURITY_MODE_ID;
     lwm2m_data_encode_int(dataP->securityMode, serverP->securityData + 3);
 
     if (serverP->securitySize > 4)

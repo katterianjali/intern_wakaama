@@ -29,6 +29,7 @@ elseif(DTLS_MBEDTLS)
     set(SHARED_SOURCES
         ${SHARED_SOURCES}
         ${SHARED_SOURCES_DIR}/mbedtlsconnection.c
+        ${SHARED_SOURCES_DIR}/mbedtls_random.c
     )
     add_compile_definitions(WITH_MBEDTLS)
 else()

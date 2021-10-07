@@ -4,11 +4,13 @@ add_compile_definitions(_POSIX_C_SOURCE=200809)
 add_compile_options(-pedantic)
 
 if(DTLS_MBEDTLS)
+    message("Building Mbed TLS")
     option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
     option(ENABLE_TESTING "Build mbed TLS tests." OFF)
     include_directories(${CMAKE_CURRENT_LIST_DIR}/shared/dtls/mbedtls/include)
     # Use custom config file for Mbed TLS
-    add_definitions(-DMBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_LIST_DIR}/shared/dtls/config-ccm-psk-tls1_2.h")
+    #add_definitions(-DMBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_LIST_DIR}/shared/dtls/config-ccm-psk-tls1_2.h")
+    add_definitions(-DMBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_LIST_DIR}/shared/dtls/config-ccm-ecdsa-dtls1_2.h")
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/shared/dtls/mbedtls)
 
     include_directories(${CMAKE_CURRENT_LIST_DIR}/client)

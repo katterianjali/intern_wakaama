@@ -61,9 +61,16 @@
 #include "commandline.h"
 #ifdef WITH_TINYDTLS
 #include "tinydtlsconnection.h"
-#elif defined(WITH_MBEDTLS)
+#elif defined WITH_MBEDTLS
 #include "mbedtlsconnection.h"
+#include "mbedtls/build_info.h"
 #include "connection.h"
+#include "mbedtls/build_info.h"
+#ifdef MBEDTLS_X509_CRT_PARSE_C
+#include "mbedtls/x509.h"
+#include "mbedtls/x509_crt.h"
+#include "mbedtls_random.h"
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 #endif
 
 #include <arpa/inet.h>
@@ -91,6 +98,160 @@ static int g_quit = 0;
 
 #define OBJ_COUNT 9
 lwm2m_object_t * objArray[OBJ_COUNT];
+
+
+/* This is generated from tests/data_files/test-ca2.crt.der using `xxd -i`. */
+/* BEGIN FILE binary macro TEST_CA_CRT_EC_DER tests/data_files/test-ca2.crt.der */
+#define TEST_CA_CRT_EC_DER {                                                 \
+  0x30, 0x82, 0x02, 0x04, 0x30, 0x82, 0x01, 0x88, 0xa0, 0x03, 0x02, 0x01,    \
+  0x02, 0x02, 0x09, 0x00, 0xc1, 0x43, 0xe2, 0x7e, 0x62, 0x43, 0xcc, 0xe8,    \
+  0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02,    \
+  0x05, 0x00, 0x30, 0x3e, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04,    \
+  0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30, 0x0f, 0x06, 0x03, 0x55,    \
+  0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c,    \
+  0x31, 0x1c, 0x30, 0x1a, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x13, 0x50,    \
+  0x6f, 0x6c, 0x61, 0x72, 0x73, 0x73, 0x6c, 0x20, 0x54, 0x65, 0x73, 0x74,    \
+  0x20, 0x45, 0x43, 0x20, 0x43, 0x41, 0x30, 0x1e, 0x17, 0x0d, 0x31, 0x39,    \
+  0x30, 0x32, 0x31, 0x30, 0x31, 0x34, 0x34, 0x34, 0x30, 0x30, 0x5a, 0x17,    \
+  0x0d, 0x32, 0x39, 0x30, 0x32, 0x31, 0x30, 0x31, 0x34, 0x34, 0x34, 0x30,    \
+  0x30, 0x5a, 0x30, 0x3e, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04,    \
+  0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30, 0x0f, 0x06, 0x03, 0x55,    \
+  0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c,    \
+  0x31, 0x1c, 0x30, 0x1a, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x13, 0x50,    \
+  0x6f, 0x6c, 0x61, 0x72, 0x73, 0x73, 0x6c, 0x20, 0x54, 0x65, 0x73, 0x74,    \
+  0x20, 0x45, 0x43, 0x20, 0x43, 0x41, 0x30, 0x76, 0x30, 0x10, 0x06, 0x07,    \
+  0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x05, 0x2b, 0x81, 0x04,    \
+  0x00, 0x22, 0x03, 0x62, 0x00, 0x04, 0xc3, 0xda, 0x2b, 0x34, 0x41, 0x37,    \
+  0x58, 0x2f, 0x87, 0x56, 0xfe, 0xfc, 0x89, 0xba, 0x29, 0x43, 0x4b, 0x4e,    \
+  0xe0, 0x6e, 0xc3, 0x0e, 0x57, 0x53, 0x33, 0x39, 0x58, 0xd4, 0x52, 0xb4,    \
+  0x91, 0x95, 0x39, 0x0b, 0x23, 0xdf, 0x5f, 0x17, 0x24, 0x62, 0x48, 0xfc,    \
+  0x1a, 0x95, 0x29, 0xce, 0x2c, 0x2d, 0x87, 0xc2, 0x88, 0x52, 0x80, 0xaf,    \
+  0xd6, 0x6a, 0xab, 0x21, 0xdd, 0xb8, 0xd3, 0x1c, 0x6e, 0x58, 0xb8, 0xca,    \
+  0xe8, 0xb2, 0x69, 0x8e, 0xf3, 0x41, 0xad, 0x29, 0xc3, 0xb4, 0x5f, 0x75,    \
+  0xa7, 0x47, 0x6f, 0xd5, 0x19, 0x29, 0x55, 0x69, 0x9a, 0x53, 0x3b, 0x20,    \
+  0xb4, 0x66, 0x16, 0x60, 0x33, 0x1e, 0xa3, 0x50, 0x30, 0x4e, 0x30, 0x0c,    \
+  0x06, 0x03, 0x55, 0x1d, 0x13, 0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xff,    \
+  0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14, 0x9d,    \
+  0x6d, 0x20, 0x24, 0x49, 0x01, 0x3f, 0x2b, 0xcb, 0x78, 0xb5, 0x19, 0xbc,    \
+  0x7e, 0x24, 0xc9, 0xdb, 0xfb, 0x36, 0x7c, 0x30, 0x1f, 0x06, 0x03, 0x55,    \
+  0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x9d, 0x6d, 0x20, 0x24,    \
+  0x49, 0x01, 0x3f, 0x2b, 0xcb, 0x78, 0xb5, 0x19, 0xbc, 0x7e, 0x24, 0xc9,    \
+  0xdb, 0xfb, 0x36, 0x7c, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce,    \
+  0x3d, 0x04, 0x03, 0x02, 0x05, 0x00, 0x03, 0x68, 0x00, 0x30, 0x65, 0x02,    \
+  0x30, 0x51, 0xca, 0xae, 0x30, 0x0f, 0xa4, 0x70, 0x74, 0x04, 0xdd, 0x5a,    \
+  0x2c, 0x7f, 0x13, 0xc1, 0xc2, 0x77, 0xbe, 0x1d, 0x00, 0xc5, 0xe2, 0x99,    \
+  0x8f, 0x7d, 0x26, 0x45, 0xd3, 0x8a, 0x06, 0x68, 0x3f, 0x8c, 0xb4, 0xb7,    \
+  0xad, 0x4d, 0xe0, 0xf1, 0x54, 0x01, 0x1e, 0x99, 0xfc, 0xb0, 0xe4, 0xd3,    \
+  0x07, 0x02, 0x31, 0x00, 0xdc, 0x4f, 0x3b, 0x90, 0x1e, 0xae, 0x29, 0x99,    \
+  0x84, 0x28, 0xcc, 0x7b, 0x47, 0x78, 0x09, 0x31, 0xdf, 0xd6, 0x01, 0x59,    \
+  0x30, 0x5e, 0xf4, 0xf8, 0x8a, 0x84, 0x3f, 0xea, 0x39, 0x54, 0x7b, 0x08,    \
+  0xa7, 0x60, 0xaa, 0xbd, 0xf9, 0x5b, 0xd1, 0x51, 0x96, 0x14, 0x2e, 0x65,    \
+  0xf5, 0xae, 0x1c, 0x42                                                     \
+}
+/* END FILE */
+
+/* This is generated from tests/data_files/cli2.key.der using `xxd -i`. */
+/* BEGIN FILE binary macro TEST_CLI_KEY_EC_DER tests/data_files/cli2.key.der */
+#define TEST_CLI_KEY_EC_DER {                                                \
+    0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20, 0xf6, 0xf7, 0x86, 0x64, 0xf1,  \
+    0x67, 0x7f, 0xe6, 0x64, 0x8d, 0xef, 0xca, 0x4e, 0xe9, 0xdd, 0x4d, 0xf0,  \
+    0x05, 0xff, 0x96, 0x22, 0x8a, 0x7a, 0x84, 0x38, 0x64, 0x17, 0x32, 0x61,  \
+    0x98, 0xb7, 0x2a, 0xa0, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,  \
+    0x03, 0x01, 0x07, 0xa1, 0x44, 0x03, 0x42, 0x00, 0x04, 0x57, 0xe5, 0xae,  \
+    0xb1, 0x73, 0xdf, 0xd3, 0xac, 0xbb, 0x93, 0xb8, 0x81, 0xff, 0x12, 0xae,  \
+    0xee, 0xe6, 0x53, 0xac, 0xce, 0x55, 0x53, 0xf6, 0x34, 0x0e, 0xcc, 0x2e,  \
+    0xe3, 0x63, 0x25, 0x0b, 0xdf, 0x98, 0xe2, 0xf3, 0x5c, 0x60, 0x36, 0x96,  \
+    0xc0, 0xd5, 0x18, 0x14, 0x70, 0xe5, 0x7f, 0x9f, 0xd5, 0x4b, 0x45, 0x18,  \
+    0xe5, 0xb0, 0x6c, 0xd5, 0x5c, 0xf8, 0x96, 0x8f, 0x87, 0x70, 0xa3, 0xe4,  \
+    0xc7                                                                     \
+}
+/* END FILE */
+
+
+/* This is generated from tests/data_files/cli2.crt.der using `xxd -i`. */
+/* BEGIN FILE binary macro TEST_CLI_CRT_EC_DER tests/data_files/cli2.crt.der */
+#define TEST_CLI_CRT_EC_DER {                                                \
+    0x30, 0x82, 0x01, 0xdf, 0x30, 0x82, 0x01, 0x63, 0xa0, 0x03, 0x02, 0x01,  \
+    0x02, 0x02, 0x01, 0x0d, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce,  \
+    0x3d, 0x04, 0x03, 0x02, 0x05, 0x00, 0x30, 0x3e, 0x31, 0x0b, 0x30, 0x09,  \
+    0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30,  \
+    0x0f, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61,  \
+    0x72, 0x53, 0x53, 0x4c, 0x31, 0x1c, 0x30, 0x1a, 0x06, 0x03, 0x55, 0x04,  \
+    0x03, 0x0c, 0x13, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c, 0x20,  \
+    0x54, 0x65, 0x73, 0x74, 0x20, 0x45, 0x43, 0x20, 0x43, 0x41, 0x30, 0x1e,  \
+    0x17, 0x0d, 0x31, 0x39, 0x30, 0x32, 0x31, 0x30, 0x31, 0x34, 0x34, 0x34,  \
+    0x30, 0x30, 0x5a, 0x17, 0x0d, 0x32, 0x39, 0x30, 0x32, 0x31, 0x30, 0x31,  \
+    0x34, 0x34, 0x34, 0x30, 0x30, 0x5a, 0x30, 0x41, 0x31, 0x0b, 0x30, 0x09,  \
+    0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30,  \
+    0x0f, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61,  \
+    0x72, 0x53, 0x53, 0x4c, 0x31, 0x1f, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x04,  \
+    0x03, 0x0c, 0x16, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c, 0x20,  \
+    0x54, 0x65, 0x73, 0x74, 0x20, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x20,  \
+    0x32, 0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d,  \
+    0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07,  \
+    0x03, 0x42, 0x00, 0x04, 0x57, 0xe5, 0xae, 0xb1, 0x73, 0xdf, 0xd3, 0xac,  \
+    0xbb, 0x93, 0xb8, 0x81, 0xff, 0x12, 0xae, 0xee, 0xe6, 0x53, 0xac, 0xce,  \
+    0x55, 0x53, 0xf6, 0x34, 0x0e, 0xcc, 0x2e, 0xe3, 0x63, 0x25, 0x0b, 0xdf,  \
+    0x98, 0xe2, 0xf3, 0x5c, 0x60, 0x36, 0x96, 0xc0, 0xd5, 0x18, 0x14, 0x70,  \
+    0xe5, 0x7f, 0x9f, 0xd5, 0x4b, 0x45, 0x18, 0xe5, 0xb0, 0x6c, 0xd5, 0x5c,  \
+    0xf8, 0x96, 0x8f, 0x87, 0x70, 0xa3, 0xe4, 0xc7, 0xa3, 0x4d, 0x30, 0x4b,  \
+    0x30, 0x09, 0x06, 0x03, 0x55, 0x1d, 0x13, 0x04, 0x02, 0x30, 0x00, 0x30,  \
+    0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14, 0x7a, 0x00,  \
+    0x5f, 0x86, 0x64, 0xfc, 0xe0, 0x5d, 0xe5, 0x11, 0x10, 0x3b, 0xb2, 0xe6,  \
+    0x3b, 0xc4, 0x26, 0x3f, 0xcf, 0xe2, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d,  \
+    0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x9d, 0x6d, 0x20, 0x24, 0x49,  \
+    0x01, 0x3f, 0x2b, 0xcb, 0x78, 0xb5, 0x19, 0xbc, 0x7e, 0x24, 0xc9, 0xdb,  \
+    0xfb, 0x36, 0x7c, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,  \
+    0x04, 0x03, 0x02, 0x05, 0x00, 0x03, 0x68, 0x00, 0x30, 0x65, 0x02, 0x31,  \
+    0x00, 0xca, 0xa6, 0x7b, 0x80, 0xca, 0x32, 0x57, 0x54, 0x96, 0x99, 0x43,  \
+    0x11, 0x3f, 0x50, 0xe8, 0x4a, 0x6d, 0xad, 0xee, 0xee, 0x51, 0x62, 0xa1,  \
+    0xb0, 0xb3, 0x85, 0xfb, 0x33, 0xe4, 0x28, 0x39, 0x5f, 0xce, 0x92, 0x24,  \
+    0x25, 0x81, 0x05, 0x81, 0xc9, 0x68, 0x0c, 0x71, 0x98, 0xc3, 0xcd, 0x2e,  \
+    0x22, 0x02, 0x30, 0x35, 0xfb, 0x72, 0x3d, 0x7b, 0x1a, 0x6d, 0x3a, 0x8c,  \
+    0x33, 0xb8, 0x84, 0x1e, 0x05, 0x69, 0x5f, 0xf1, 0x91, 0xa3, 0x32, 0xa4,  \
+    0x95, 0x8f, 0x72, 0x40, 0x8f, 0xf9, 0x7a, 0x80, 0x3a, 0x80, 0x65, 0xbb,  \
+    0x63, 0xe8, 0xa6, 0xb8, 0x64, 0x7f, 0xa1, 0xaa, 0x39, 0xc9, 0x23, 0x9b,  \
+    0x6b, 0xd5, 0x64                           \
+}
+/* END FILE */
+
+const unsigned char mbedtls_test_cli_key_ec_der[]  = TEST_CLI_KEY_EC_DER;
+const unsigned char mbedtls_test_ca_crt_ec_der[]   = TEST_CA_CRT_EC_DER;
+const unsigned char mbedtls_test_cli_crt_ec_der[]  = TEST_CLI_CRT_EC_DER;
+
+/* List of all available CA certificates in DER format */
+const unsigned char * mbedtls_test_cas_der[] = {
+#if defined(MBEDTLS_ECDSA_C)
+    mbedtls_test_ca_crt_ec_der,
+#endif /* MBEDTLS_ECDSA_C */
+    NULL
+};
+
+const size_t mbedtls_test_cas_der_len[] = {
+#if defined(MBEDTLS_ECDSA_C)
+    sizeof( mbedtls_test_ca_crt_ec_der ),
+#endif /* MBEDTLS_ECDSA_C */
+    0
+};
+const size_t mbedtls_test_cli_key_ec_der_len =
+    sizeof( mbedtls_test_cli_key_ec_der );
+const size_t mbedtls_test_ca_crt_ec_der_len =
+    sizeof( mbedtls_test_ca_crt_ec_der );
+const size_t mbedtls_test_cli_crt_ec_der_len =
+    sizeof( mbedtls_test_cli_crt_ec_der );
+/*
+ * global options
+ */
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
+struct options
+{
+    char *psk;            /* the pre-shared key input                 */
+    char *ca_file;        /* the file with the CA certificate(s)      */
+    char *crt_file;       /* the file with the client certificate     */
+    char *key_file;       /* the file with the client key             */
+} options;
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
+
 
 // only backup security and server objects
 # define BACKUP_OBJECT_COUNT 2
@@ -683,7 +844,6 @@ static void prv_display_objects(lwm2m_context_t * lwm2mH,
 }
 
 #ifdef LWM2M_BOOTSTRAP
-
 static void prv_initiate_bootstrap(lwm2m_context_t * lwm2mH,
                                    char * buffer,
                                    void * user_data)
@@ -827,7 +987,7 @@ static void close_backup_object()
         }
     }
 }
-#endif
+#endif /* */
 
 void print_usage(void)
 {
@@ -871,13 +1031,36 @@ int main(int argc, char *argv[])
     lwm2m_client_state_t previousState = STATE_INITIAL;
 #endif
 
-    char * pskId = NULL;
-#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
-    char * psk = NULL;
-#endif
-    uint16_t pskLen = -1;
-    char * pskBuffer = NULL;
+    uint8_t securityMode;
+    char serverUri[50];
+    int serverId = 123;
 
+#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
+    /* PSK-based security mode */
+    options.psk = NULL;
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
+
+#if defined WITH_MBEDTLS
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    rng_context_t rng;
+#endif /* MBEDTLS_X509_CRT_PARSE_C */ 
+
+    int ret;
+
+    options.ca_file = "";
+    options.crt_file = "";
+    options.key_file = "";
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    mbedtls_x509_crt cacert;
+    mbedtls_x509_crt clicert;
+    mbedtls_pk_context pkey;
+#endif  /* MBEDTLS_X509_CRT_PARSE_C */
+  
+#endif /* WITH_MBEDTLS */
+
+    bool secure_coap;
+
+    char *p, *q;
     /*
      * The function start by setting up the command line interface (which may or not be useful depending on your project)
      *
@@ -913,26 +1096,26 @@ int main(int argc, char *argv[])
     memset(&data, 0, sizeof(client_data_t));
     data.addressFamily = AF_INET6;
 
+    int param_match=0;
+
     opt = 1;
     while (opt < argc)
     {
-        if (argv[opt] == NULL
-            || argv[opt][0] != '-'
-            || argv[opt][2] != 0)
+        p = argv[opt];
+
+        if( strcmp( p, "-b" ) == 0 )
         {
-            print_usage();
-            return 0;
-        }
-        switch (argv[opt][1])
-        {
-        case 'b':
             bootstrapRequested = true;
             if (!serverPortChanged) serverPort = LWM2M_BSSERVER_PORT_STR;
-            break;
-        case 'c':
+            param_match = 1;
+        }
+        else if( strcmp( p, "-c" ) == 0 )
+        {
             batterylevelchanging = 1;
-            break;
-        case 't':
+            param_match = 1;
+        }
+        else if( strcmp( p, "-t" ) == 0 )
+        {
             opt++;
             if (opt >= argc)
             {
@@ -944,28 +1127,10 @@ int main(int argc, char *argv[])
                 print_usage();
                 return 0;
             }
-            break;
-#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
-        case 'i':
-            opt++;
-            if (opt >= argc)
-            {
-                print_usage();
-                return 0;
-            }
-            pskId = argv[opt];
-            break;
-        case 's':
-            opt++;
-            if (opt >= argc)
-            {
-                print_usage();
-                return 0;
-            }
-            psk = argv[opt];
-            break;
-#endif
-        case 'n':
+            param_match = 1;
+        }
+        else if( strcmp( p, "-n" ) == 0 )
+        {
             opt++;
             if (opt >= argc)
             {
@@ -973,8 +1138,10 @@ int main(int argc, char *argv[])
                 return 0;
             }
             name = argv[opt];
-            break;
-        case 'l':
+            param_match = 1;
+        }
+        else if( strcmp( p, "-l" ) == 0 )
+        {
             opt++;
             if (opt >= argc)
             {
@@ -982,8 +1149,10 @@ int main(int argc, char *argv[])
                 return 0;
             }
             localPort = argv[opt];
-            break;
-        case 'h':
+            param_match = 1;
+        }
+        else if( strcmp( p, "-h" ) == 0 )
+        {
             opt++;
             if (opt >= argc)
             {
@@ -991,8 +1160,10 @@ int main(int argc, char *argv[])
                 return 0;
             }
             server = argv[opt];
-            break;
-        case 'p':
+            param_match = 1;
+        }        
+        else if( strcmp( p, "-p" ) == 0 )
+        {
             opt++;
             if (opt >= argc)
             {
@@ -1001,11 +1172,16 @@ int main(int argc, char *argv[])
             }
             serverPort = argv[opt];
             serverPortChanged = true;
-            break;
-        case '4':
+            param_match = 1;
+        }        
+        else if( strcmp( p, "-4" ) == 0 )
+        {
             data.addressFamily = AF_INET;
-            break;
-        case 'S':
+            param_match = 1;
+        } 
+        else if( strcmp( p, "-S" ) == 0 )
+        {
+            param_match = 1;
             opt++;
             if (opt >= argc) {
                 print_usage();
@@ -1019,11 +1195,64 @@ int main(int argc, char *argv[])
                 print_usage();
                 return 0;
             }
-        default:
+        } 
+        
+        if (param_match == 1)
+        {
+           opt += 1;
+           param_match = 0;
+           continue;
+        }
+
+        if( ( q = strchr( p, '=' ) ) != NULL )
+        {
+            *q++ = '\0';
+        }
+
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+        if( strcmp( p, "-ca_file" ) == 0 )
+        {
+            options.ca_file = q;
+            opt++;
+            continue;
+        }
+        if( strcmp( p, "-crt_file" ) == 0 )
+        {
+            options.crt_file = q;
+            opt++;
+            continue;
+        }
+        if( strcmp( p, "-key_file" ) == 0 )
+        {
+            options.key_file = q;
+            opt++;
+            continue;
+        }
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+        if( strcmp( p, "-psk" ) == 0 )
+        {
+            options.psk = q;
+            opt++;
+            continue;
+        }
+        if( strcmp( p, "-psk_identity" ) == 0 )
+        {
+            data.psk_identity = (uint8_t*) strdup( (const char *) q);
+            data.psk_identity_len = (uint16_t) strlen( (const char *) data.psk_identity);
+            opt++;
+            continue;
+        }
+#endif /* WITH_TINYDTLS || ( WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED )*/
+
+        /* No parameter matches */
+        if (param_match == 0)
+        {
             print_usage();
             return 0;
-        }
-        opt += 1;
+        };
+
     }
 
     if (!server)
@@ -1048,20 +1277,20 @@ int main(int argc, char *argv[])
      * Now the main function fill an array with each object, this list will be later passed to liblwm2m.
      * Those functions are located in their respective object file.
      */
-#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
-    if (psk != NULL)
+#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+    if (options.psk != NULL)
     {
-        pskLen = strlen(psk) / 2;
-        pskBuffer = malloc(pskLen);
+        data.psk_len = strlen(options.psk) / 2;
+        data.psk = malloc(data.psk_len);
 
-        if (NULL == pskBuffer)
+        if (NULL == data.psk)
         {
-            fprintf(stderr, "Failed to create PSK binary buffer\r\n");
+            fprintf(stderr, "Failed to allocate buffer for PSK\r\n");
             return -1;
         }
         // Hex string to binary
-        char *h = psk;
-        char *b = pskBuffer;
+        char *h = options.psk;
+        char *b = (char*) data.psk;
         char xlate[] = "0123456789ABCDEF";
 
         for ( ; *h; h += 2, ++b)
@@ -1071,27 +1300,144 @@ int main(int argc, char *argv[])
 
             if (!r || !l)
             {
-                fprintf(stderr, "Failed to parse Pre-Shared-Key HEXSTRING\r\n");
+                fprintf(stderr, "Failed to parse PSK in hex-format\r\n");
                 return -1;
             }
 
             *b = ((l - xlate) << 4) + (r - xlate);
         }
     }
-#endif
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
-    char serverUri[50];
-    int serverId = 123;
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    /* Initialize the RNG and the session data */
+    rng_init( &rng );
+    ret = rng_seed( &rng, 0, name );
+    if( ret != 0 )
+    {
+        fprintf(stderr, " failed\n  !  rng_seed returned -0x%x\n\n",
+                   (unsigned int) -ret );
+        return -1;
+    }
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
 #if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     sprintf (serverUri, "coaps://%s:%s", server, serverPort);
+    secure_coap=true;
 #else
     sprintf (serverUri, "coap://%s:%s", server, serverPort);
+    secure_coap=false;
 #endif
-#ifdef LWM2M_BOOTSTRAP
-    objArray[0] = get_security_object(serverId, serverUri, pskId, pskBuffer, pskLen, bootstrapRequested);
-#else
-    objArray[0] = get_security_object(serverId, serverUri, pskId, pskBuffer, pskLen, false);
-#endif
+
+    /* Determine security mode */
+#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+    if (data.psk_identity != NULL && data.psk != NULL)
+    {
+        securityMode = LWM2M_SECURITY_MODE_PRE_SHARED_KEY;
+    } else 
+#endif 
+#if defined WITH_MBEDTLS
+    if (secure_coap == true)
+    {
+        securityMode = LWM2M_SECURITY_MODE_CERTIFICATE;
+    } else 
+#endif /* WITH_MBEDTLS */
+    {   
+        securityMode = LWM2M_SECURITY_MODE_NONE;
+    }
+
+#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+    if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
+    {
+
+        objArray[0] = get_security_object(serverId, serverUri, 
+                                        LWM2M_SECURITY_MODE_PRE_SHARED_KEY,
+                                        bootstrapRequested);
+    } else 
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+    if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE)
+    {
+        mbedtls_x509_crt_init( &cacert );
+        mbedtls_x509_crt_init( &clicert );
+        mbedtls_pk_init( &pkey );
+
+#if defined(MBEDTLS_FS_IO)
+        if( strlen( options.ca_file ) )
+            ret = mbedtls_x509_crt_parse_file( &cacert, options.ca_file );
+        else
+#endif /* MBEDTLS_FS_IO */
+        {
+            for(int i = 0; mbedtls_test_cas_der[i] != NULL; i++ )
+            {
+                ret = mbedtls_x509_crt_parse_der( &cacert,
+                            (const unsigned char *) mbedtls_test_cas_der[i],
+                            mbedtls_test_cas_der_len[i] );
+                if( ret != 0 )
+                    break;
+            }
+        }
+        if( ret < 0 )
+        {
+            fprintf(stderr, " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
+                            (unsigned int) -ret );
+            return -1;
+        }
+
+#if defined(MBEDTLS_FS_IO)
+        if( strlen( options.crt_file ) )
+            ret = mbedtls_x509_crt_parse_file( &clicert, options.crt_file );
+        else
+#endif /* MBEDTLS_FS_IO */
+            ret = mbedtls_x509_crt_parse( &clicert,
+                    (const unsigned char *) mbedtls_test_cli_crt_ec_der,
+                    mbedtls_test_cli_crt_ec_der_len );
+
+        if( ret != 0 )
+        {
+            fprintf(stderr, " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
+                            (unsigned int) -ret );
+            return -1;
+        }
+
+#if defined(MBEDTLS_FS_IO)
+        if( strlen( options.key_file ) )
+            ret = mbedtls_pk_parse_keyfile( &pkey, options.key_file, NULL, rng_get, &rng );
+        else
+#endif /* MBEDTLS_FS_IO */
+            ret = mbedtls_pk_parse_key( &pkey,
+                    (const unsigned char *) mbedtls_test_cli_key_ec_der,
+                    mbedtls_test_cli_key_ec_der_len, NULL, 0, rng_get, &rng );
+
+        if( ret != 0 )
+        {
+            fprintf(stderr, " failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n",
+                            (unsigned int) -ret );
+            return -1;
+        }
+
+        // Store credentials as part of the client data
+        data.pkey = &pkey;
+        data.cacert = &cacert;
+        data.clicert = &clicert;
+
+        // Security relevant data is not stored in the Security Object 
+        objArray[0] = get_security_object(serverId, serverUri, 
+                                        LWM2M_SECURITY_MODE_CERTIFICATE, 
+                                        bootstrapRequested);
+    } else
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
+    if (securityMode == LWM2M_SECURITY_MODE_NONE)
+    {
+        objArray[0] = get_security_object(serverId, serverUri, 
+                                        LWM2M_SECURITY_MODE_NONE, 
+                                        false);
+    } else
+    {
+        fprintf(stderr, "Unsupported security mode\r\n");
+        return -1;        
+    }
+
     if (NULL == objArray[0])
     {
         fprintf(stderr, "Failed to create security object\r\n");
@@ -1200,7 +1546,7 @@ int main(int argc, char *argv[])
      */
     init_value_change(lwm2mH);
 
-    fprintf(stdout, "LWM2M Client \"%s\" started on port %s\r\n", name, localPort);
+    fprintf(stdout, "LwM2M Client \"%s\" started on port %s\r\n", name, localPort);
     fprintf(stdout, "> "); fflush(stdout);
     /*
      * We now enter in a while loop that will handle the communications from the server
@@ -1451,8 +1797,9 @@ int main(int argc, char *argv[])
      */
     if (g_quit == 1)
     {
-#ifdef WITH_TINYDTLS
-        free(pskBuffer);
+#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+        free(data.psk_identity);
+        free(data.psk);
 #endif
 
 #ifdef LWM2M_BOOTSTRAP
@@ -1464,6 +1811,17 @@ int main(int argc, char *argv[])
     close(data.sock);
     connection_free(data.connList);
 #endif
+
+
+#if defined(WITH_MBEDTLS)
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    mbedtls_x509_crt_free( data.clicert );
+    mbedtls_x509_crt_free( data.cacert );
+    mbedtls_pk_free( data.pkey );
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#endif /* WITH_MBEDTLS */
 
     clean_security_object(objArray[0]);
     lwm2m_free(objArray[0]);

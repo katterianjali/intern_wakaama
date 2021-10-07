@@ -40,7 +40,11 @@
  */
 
 /*
- * Here we implement a very basic LWM2M Security Object which only knows NoSec security mode.
+ * Here we implement a basic LwM2M Security Object. 
+ * 
+ * The security credentials, such as PSK, private key, etc. are not stored in the 
+ * resources of the security object directly. Instead, they are maintained by the respective 
+ * implementation of the cryptographic library. 
  */
 
 #include "liblwm2m.h"
@@ -56,12 +60,6 @@ typedef struct _security_instance_
     char *                       uri;
     bool                         isBootstrap;    
     uint8_t                      securityMode;
-    char *                       publicIdentity;
-    uint16_t                     publicIdLen;
-    char *                       serverPublicKey;
-    uint16_t                     serverPublicKeyLen;
-    char *                       secretKey;
-    uint16_t                     secretKeyLen;
     uint8_t                      smsSecurityMode;
     char *                       smsParams; // SMS binding key parameters
     uint16_t                     smsParamsLen;
@@ -85,20 +83,8 @@ static uint8_t prv_get_value(lwm2m_data_t * dataP,
         lwm2m_data_encode_bool(targetP->isBootstrap, dataP);
         return COAP_205_CONTENT;
 
-    case LWM2M_SECURITY_SECURITY_ID:
+    case LWM2M_SECURITY_SECURITY_MODE_ID:
         lwm2m_data_encode_int(targetP->securityMode, dataP);
-        return COAP_205_CONTENT;
-
-    case LWM2M_SECURITY_PUBLIC_KEY_ID:
-        lwm2m_data_encode_opaque((uint8_t*)targetP->publicIdentity, targetP->publicIdLen, dataP);
-        return COAP_205_CONTENT;
-
-    case LWM2M_SECURITY_SERVER_PUBLIC_KEY_ID:
-        lwm2m_data_encode_opaque((uint8_t*)targetP->serverPublicKey, targetP->serverPublicKeyLen, dataP);
-        return COAP_205_CONTENT;
-
-    case LWM2M_SECURITY_SECRET_KEY_ID:
-        lwm2m_data_encode_opaque((uint8_t*)targetP->secretKey, targetP->secretKeyLen, dataP);
         return COAP_205_CONTENT;
 
     case LWM2M_SECURITY_SMS_SECURITY_ID:
@@ -155,7 +141,7 @@ static uint8_t prv_security_read(lwm2m_context_t *contextP,
     {
         uint16_t resList[] = {LWM2M_SECURITY_URI_ID,
                               LWM2M_SECURITY_BOOTSTRAP_ID,
-                              LWM2M_SECURITY_SECURITY_ID,
+                              LWM2M_SECURITY_SECURITY_MODE_ID,
                               LWM2M_SECURITY_PUBLIC_KEY_ID,
                               LWM2M_SECURITY_SERVER_PUBLIC_KEY_ID,
                               LWM2M_SECURITY_SECRET_KEY_ID,
@@ -256,7 +242,7 @@ static uint8_t prv_security_write(lwm2m_context_t *contextP,
             }
             break;
 
-        case LWM2M_SECURITY_SECURITY_ID:
+        case LWM2M_SECURITY_SECURITY_MODE_ID:
         {
             int64_t value;
 
@@ -493,11 +479,6 @@ void copy_security_object(lwm2m_object_t * objectDest, lwm2m_object_t * objectSr
         memcpy(instanceDest, instanceSrc, sizeof(security_instance_t));
         instanceDest->uri = (char*)lwm2m_malloc(strlen(instanceSrc->uri) + 1);
         strcpy(instanceDest->uri, instanceSrc->uri);
-        if (instanceSrc->securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
-        {
-            instanceDest->publicIdentity = lwm2m_strdup(instanceSrc->publicIdentity);
-            instanceDest->secretKey = lwm2m_strdup(instanceSrc->secretKey);
-        }
         instanceSrc = (security_instance_t *)instanceSrc->next;
         if (previousInstanceDest == NULL)
         {
@@ -535,21 +516,16 @@ void clean_security_object(lwm2m_object_t * objectP)
         {
             lwm2m_free(securityInstance->uri);
         }
-        if (securityInstance->securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
-        {
-            lwm2m_free(securityInstance->publicIdentity);
-            lwm2m_free(securityInstance->secretKey);
-        }
         lwm2m_free(securityInstance);
     }
+
+    /* TBD: Free resources allocated for credentials */
 }
 
 lwm2m_object_t * get_security_object(int serverId,
                                      const char* serverUri,
-                                     char * bsPskId,
-                                     char * psk,
-                                     uint16_t pskLen,
-                                     bool isBootstrap)
+                                     uint8_t securityMode,
+                                     bool isBootstrap)                         
 {
     lwm2m_object_t * securityObj;
 
@@ -571,38 +547,28 @@ lwm2m_object_t * get_security_object(int serverId,
             return NULL;
         }
 
+        // Set Server URL
         memset(targetP, 0, sizeof(security_instance_t));
         targetP->instanceId = 0;
         targetP->uri = (char*)lwm2m_malloc(strlen(serverUri)+1); 
+        if (NULL == targetP->uri)
+        {
+            lwm2m_free(securityObj);
+            return NULL;
+        }
+
         strcpy(targetP->uri, serverUri);
 
-        targetP->securityMode = LWM2M_SECURITY_MODE_NONE;
-        targetP->publicIdentity = NULL;
-        targetP->publicIdLen = 0;
-        targetP->secretKey = NULL;
-        targetP->secretKeyLen = 0;
-        if (bsPskId != NULL || psk != NULL)
-        {
-            targetP->securityMode = LWM2M_SECURITY_MODE_PRE_SHARED_KEY;
-            if (bsPskId)
-            {
-                targetP->publicIdentity = strdup(bsPskId);
-                targetP->publicIdLen = strlen(bsPskId);
-            }
-            if (pskLen > 0)
-            {
-                targetP->secretKey = (char*)lwm2m_malloc(pskLen);
-                if (targetP->secretKey == NULL)
-                {
-                    clean_security_object(securityObj);
-                    return NULL;
-                }
-                memcpy(targetP->secretKey, psk, pskLen);
-                targetP->secretKeyLen = pskLen;
-            }
-        }
+        // Set the security mode
+        targetP->securityMode = securityMode;
+
+        // Set Bootstrap
         targetP->isBootstrap = isBootstrap;
+
+        // Set Short Server Id
         targetP->shortID = serverId;
+
+        // Set Client Holdoff Time
         targetP->clientHoldOffTime = 10;
 
         securityObj->instanceList = LWM2M_LIST_ADD(securityObj->instanceList, targetP);

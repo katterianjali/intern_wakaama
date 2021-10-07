@@ -11,6 +11,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/../shared/shared.cmake)
 
 add_compile_definitions(LWM2M_CLIENT_MODE)
 # add_compile_definitions(LWM2M_BOOTSTRAP)
+add_compile_definitions(LWM2M_SUPPORT_TLV)
 
 if(LWM2M_VERSION VERSION_GREATER "1.0")
     add_compile_definitions(LWM2M_SUPPORT_SENML_JSON)

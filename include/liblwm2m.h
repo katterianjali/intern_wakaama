@@ -203,7 +203,7 @@ bool lwm2m_session_is_equal(void * session1, void * session2, void * userData);
  */
 #define LWM2M_SECURITY_URI_ID                 0
 #define LWM2M_SECURITY_BOOTSTRAP_ID           1
-#define LWM2M_SECURITY_SECURITY_ID            2
+#define LWM2M_SECURITY_SECURITY_MODE_ID       2
 #define LWM2M_SECURITY_PUBLIC_KEY_ID          3
 #define LWM2M_SECURITY_SERVER_PUBLIC_KEY_ID   4
 #define LWM2M_SECURITY_SECRET_KEY_ID          5

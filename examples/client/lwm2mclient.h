@@ -29,6 +29,16 @@
 
 #include "liblwm2m.h"
 
+#if defined WITH_MBEDTLS
+#include "mbedtls/build_info.h"
+#ifdef MBEDTLS_X509_CRT_PARSE_C
+#include "mbedtls/x509.h"
+#include "mbedtls/x509_crt.h"
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+#else 
+#include "connection.h"
+#endif /* WITH_MBEDTLS */
+
 extern int g_reboot;
 
 /*
@@ -102,7 +112,10 @@ void system_reboot(void);
 /*
  * object_security.c
  */
-lwm2m_object_t * get_security_object(int serverId, const char* serverUri, char * bsPskId, char * psk, uint16_t pskLen, bool isBootstrap);
+lwm2m_object_t * get_security_object(int serverId,
+                                     const char* serverUri,
+                                     uint8_t securityMode,
+                                     bool isBootstrap);
 void clean_security_object(lwm2m_object_t * objectP);
 char * get_server_uri(lwm2m_object_t * objectP, uint16_t secObjInstID);
 void display_security_object(lwm2m_object_t * objectP);
@@ -113,15 +126,32 @@ typedef struct
     lwm2m_object_t * securityObjP;
     lwm2m_object_t * serverObject;
     lwm2m_context_t * ctx;
-#ifndef WITH_MBEDTLS
+#if defined WITH_MBEDTLS
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    mbedtls_x509_crt * cacert;
+    mbedtls_x509_crt * clicert;
+    mbedtls_pk_context * pkey;
+#endif  /* MBEDTLS_X509_CRT_PARSE_C */
+
+#else /* WITH_MBEDTLS */
     int sock;
 #ifdef WITH_TINYDTLS
     dtls_connection_t * connList;
     lwm2m_context_t * lwm2mH;
-#else
+#else /* WITH_TINYDTLS */
     connection_t * connList;
-#endif
-#endif
+#endif /* WITH_TINYDTLS */
+
+#endif /* WITH_MBEDTLS */
+
+#if ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) ) || defined(WITH_TINYDTLS)
+    uint8_t * psk_identity;
+    uint16_t psk_identity_len;
+    uint8_t * psk;
+    uint16_t psk_len;
+#endif /* WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED || WITH_TINYDTLS */
+
     int addressFamily;
 } client_data_t;
 

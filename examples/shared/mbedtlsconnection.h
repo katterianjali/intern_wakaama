@@ -7,6 +7,4 @@ int * mbedtls_get_sockets(lwm2m_context_t const * ctx, int * sz);
 
 int mbedtls_receive(lwm2m_context_t const * ctx, int sock, uint8_t * buffer, int sz, void ** connection);
 
-
-
-#endif
+#endif /* MBEDTLSCONNECTION_H_ */
