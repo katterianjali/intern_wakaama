@@ -237,3 +237,147 @@ Options:
  * ``./bootstrap_server [Options]``
 
 Refer to [examples/bootstrap_server/README](./examples/bootstrap_server/README) for more information.
+
+### Use of MbedTLS with the LwM2M Client
+
+DISCLAIMER: This code is experimental. Do not use in production system.
+
+To use MbedTLS with Wakaama one first has to decide what credentials to use. Currently, pre-shared secrets and X.509 certificates are supported. To keep the code size at a minimum, the Mbed TLS library offers fine-tuning using a configuration file. Two examples are provided in 
+
+- examples/shared/dtls/config-ccm-psk-tls1_2.h, and 
+- examples/shared/dtls/config-ccm-ecdsa-dtls1_2.h
+
+As the name of the file indicates, one configuration is tailored to the use of PSKs, while the second is used with ECC-based credentials.
+
+These configuration files are included in the cmake-based build process via the CMakeLists.txt in the examples folder. It is important to match the configuration of the MbedTLS library with the use of the lwm2mclient parameter invocation. 
+
+The subparagraphs below explain the use of these two credential types in more detail. 
+
+#### X.509-based Credentials
+
+To use certificate-based credentials we have to create certificates and private keys for use by Wakaama and by the LwM2M Server. In this examples we have used Leshan as the LwM2M Server. The certificates and private keys used by this example can be found in the certs folder, which are copies of what is used by the MbedTLS test harness.
+
+The following ECC-based certificates/private keys are used: 
+- Certificate for Wakaama (in certs/cli2.crt)
+- Private key for Wakaama (in certs/cli2.key)
+- CA certificate for Wakaama and Leshan (in test-ca2.crt)
+- Certificate for Leshan (in certs/server5.crt)
+- Private key for Leshan (in certs/server5.key and certs/cprik.der)
+
+Certificates and the private keys are available in different formats.
+
+Leshan and Wakaama have to be configured to use these certificates. To simplify usage in Wakaama, the demo certificates and the client private key are also included in the code. This approach is also preferred on embedded systems when there is no file system access possible. 
+
+You are, however, encouraged to create your own certificates and private keys for your demo. For deployment usage this is obviously essential to create your own keys. 
+
+NOTE: When you generate a certificate for the LwM2M Client (Wakaama) then the Common Name (CN) in the certificate needs to match the endpoint name. You can check the content of your client cert using this OpenSSL command:
+
+> openssl x509 -in cli2.crt.der -inform der -noout -text
+
+Search for the CN field. For the demo client certificate it will say: "Subject: C = NL, O = PolarSSL, CN = PolarSSL Test Client 2". 
+In this case, "PolarSSL Test Client 2" is the CN and this will also be your endpoint name. 
+
+For Leshan, download the code as described at https://github.com/eclipse/leshan. The quickest approach is to download the pre-packaged demo application using the following command:
+
+> wget https://ci.eclipse.org/leshan/job/leshan/lastSuccessfulBuild/artifact/leshan-client-demo.jar
+
+Once downloaded, use the following invocation to run Leshan. 
+
+> java -jar ./leshan-server-demo.jar -vvv --x509-certificate-chain=certs/server5.crt --x509-private-key=certs/cprik.der --truststore=certs/test-ca2.crt
+
+NOTE: You may need to adjust the paths to your certificates!
+
+A few notes about the parameters: 
+- "-vvv" will add extra debugging information.
+- "--x509-certificate-chain" will point to your file containing the server certificate.
+- "--x509-private-key" points to the file containing the private key corresponding to the public key in the server certificate.
+- "--truststore" points to the CA certificate. 
+
+For more information about these parameters (and additional parameters) please consult the Leshan documentation.
+
+Once Leshan is running, use your browser to configure the security configuration using the offered web-based portal at http://0.0.0.0:8080/#/security
+
+Add a new security entry with the "PolarSSL Test Client 2" endpoint name and security mode set to x509. Then, switch the tab to http://0.0.0.0:8080/#/clients to see the registered clients. Since we have not started the client yet, the page will be empty.
+
+Next, we need to build and start Wakaama.
+
+To build Wakaama execute the following steps. 
+
+IMPORTANT: Check the content of examples/CMakeLists.txt file to verify that the configured configuration file points to shared/dtls/config-ccm-ecdsa-dtls1_2.h
+
+```
+git clone https://github.com/hannestschofenig/wakaama.git
+cd wakaama/
+git checkout bugfix
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake -DDTLS_MBEDTLS=1 ..
+make
+```
+
+Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
+
+examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file "/home/hannes/hannes-wakaama/certs/test-ca2.key.der" -crt_file "/home/hannes/hannes-wakaama/certs/cli2.crt.der" -key_file "/home/hannes/hannes-wakaama/certs/cli2.key.der"
+
+The parameters have the following meaning: 
+- "-h" indicates the hostname of the server. 
+- "-n" allows you to specify the endpoint name. 
+- "-p" enables you to indicate the port number to be used. 
+- "-ca_file" points to the CA certificate. 
+- "-crt_file" points to the client certificate. 
+- "-key_file" points to the client private key.
+
+NOTE: You may need to adjust the paths to the certificates and private key.
+
+If everything works fine, you should be able to see a client being registered at the Leshan server and displayed in the list of registered clients.
+
+#### PSK-based Credentials
+
+PSK-based credentials are easier to use than the certificate-based security mode due to the simplified demo setup. 
+
+For Leshan, download the code as described at https://github.com/eclipse/leshan. The quickest approach is to download the pre-packaged demo application using the following command:
+
+> wget https://ci.eclipse.org/leshan/job/leshan/lastSuccessfulBuild/artifact/leshan-client-demo.jar
+
+Once downloaded, use the following invocation to run Leshan. 
+
+> java -jar ./leshan-server-demo.jar -vvv 
+
+Once Leshan is running, use your browser to configure the security configuration using the offered web-based portal at http://0.0.0.0:8080/#/security
+
+Add a new security entry with 
+- an endpoint name of your preference. Let us say you use the endpoint name "test". 
+- the security mode set to "psk".
+- the PSK identity. We use the string "my-identity" in our demo.
+- the PSK itself. For our demo we use the hex sequence (without the '0x' prefix) "0102030405".
+
+Switch the tab to http://0.0.0.0:8080/#/clients to see the registered clients. Since we have not started the client yet, the page will be empty.
+
+Next, we need to build and start Wakaama. To build Wakaama execute the following steps. 
+
+IMPORTANT: Check the content of examples/CMakeLists.txt file to verify that the configured configuration file points to shared/dtls/config-ccm-psk-tls1_2.h
+
+```
+git clone https://github.com/hannestschofenig/wakaama.git
+cd wakaama/
+git checkout bugfix
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake -DDTLS_MBEDTLS=1 ..
+make
+```
+
+Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
+
+examples/client/lwm2mclient -h localhost -n test -p 5684 -psk_identity="my-identity" -psk=0102030405
+
+The parameters have the following meaning: 
+- "-h" indicates the hostname of the server. 
+- "-n" allows you to specify the endpoint name. 
+- "-p" enables you to indicate the port number to be used. 
+- "-psk_identity" indicates the PSK identity. 
+- "-psk" contains the PSK.
+
+If everything works fine, you should be able to see a client being registered at the Leshan server and displayed in the list of registered clients.
