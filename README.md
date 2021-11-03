@@ -303,7 +303,7 @@ Next, we need to build and start Wakaama.
 
 To build Wakaama execute the following steps. 
 
-IMPORTANT: Check the content of examples/CMakeLists.txt file to verify that the configured configuration file points to shared/dtls/config-ccm-ecdsa-dtls1_2.h
+IMPORTANT: Check the content of the examples/CMakeLists.txt file to verify that the configured configuration file points to shared/dtls/config-ccm-ecdsa-dtls1_2.h
 
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
@@ -318,9 +318,12 @@ make
 
 Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
 
-examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file "/home/hannes/hannes-wakaama/certs/test-ca2.key.der" -crt_file "/home/hannes/hannes-wakaama/certs/cli2.crt.der" -key_file "/home/hannes/hannes-wakaama/certs/cli2.key.der"
+```
+examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file "../certs/test-ca2.key.der" -crt_file "../certs/cli2.crt.der" -key_file "../certs/cli2.key.der"
+```
 
-The parameters have the following meaning: 
+The parameters have the following meaning:
+
 - "-h" indicates the hostname of the server. 
 - "-n" allows you to specify the endpoint name. 
 - "-p" enables you to indicate the port number to be used. 
@@ -371,7 +374,9 @@ make
 
 Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
 
+```
 examples/client/lwm2mclient -h localhost -n test -p 5684 -psk_identity="my-identity" -psk=0102030405
+```
 
 The parameters have the following meaning: 
 - "-h" indicates the hostname of the server. 
