@@ -37,6 +37,7 @@ core/cmake_install.cmake
 lwm2mclient
 lwm2mserver
 tlvdecode
+build
 
 # SonarQube default work directory
 .scannerwork

@@ -247,9 +247,9 @@ To use MbedTLS with Wakaama one first has to decide what credentials to use. Cur
 - examples/shared/dtls/config-ccm-psk-tls1_2.h, and 
 - examples/shared/dtls/config-ccm-ecdsa-dtls1_2.h
 
-As the name of the file indicates, one configuration is tailored to the use of PSKs, while the second is used with ECC-based credentials.
+As the file names indicates, one configuration is tailored to the use of PSKs, while the second is used with ECC-based credentials. Feel free to create other configuration variants that fit your needs.
 
-These configuration files are included in the cmake-based build process via the CMakeLists.txt in the examples folder. It is important to match the configuration of the MbedTLS library with the use of the lwm2mclient parameter invocation. 
+These configuration files are included in the cmake-based build process. It is important to match the configuration of the MbedTLS library with the use of the lwm2mclient parameter invocation. 
 
 The subparagraphs below explain the use of these two credential types in more detail. 
 
@@ -287,13 +287,13 @@ Once downloaded, use the following invocation to run Leshan.
 
 NOTE: You may need to adjust the paths to your certificates!
 
-A few notes about the parameters: 
+A few notes about the command line parameters used by Leshan: 
 - "-vvv" will add extra debugging information.
 - "--x509-certificate-chain" will point to your file containing the server certificate.
 - "--x509-private-key" points to the file containing the private key corresponding to the public key in the server certificate.
 - "--truststore" points to the CA certificate. 
 
-For more information about these parameters (and additional parameters) please consult the Leshan documentation.
+For more information about Leshan command line parameters please consult the Leshan documentation.
 
 Once Leshan is running, use your browser to configure the security configuration using the offered web-based portal at http://0.0.0.0:8080/#/security
 
@@ -312,14 +312,18 @@ git checkout bugfix
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DDTLS_MBEDTLS=1 ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="examples/shared/dtls/config-ccm-ecdsa-dtls1_2.h" ..
 make
 ```
+
+Two parameters are passed into cmake:
+- DTLS_MBEDTLS ensures that MbedTLS is used (rather than TinyDTLS or no security at all), and 
+- MBEDTLS_CONFIG_FILE points to our custom MbedTLS configuration file. 
 
 Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
 
 ```
-examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file "../certs/test-ca2.key.der" -crt_file "../certs/cli2.crt.der" -key_file "../certs/cli2.key.der"
+./examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file "../certs/test-ca2.key.der" -crt_file "../certs/cli2.crt.der" -key_file "../certs/cli2.key.der"
 ```
 
 The parameters have the following meaning:
@@ -357,9 +361,7 @@ Add a new security entry with
 
 Switch the tab to http://0.0.0.0:8080/#/clients to see the registered clients. Since we have not started the client yet, the page will be empty.
 
-Next, we need to build and start Wakaama. To build Wakaama execute the following steps. 
-
-IMPORTANT: Check the content of examples/CMakeLists.txt file to verify that the configured configuration file points to shared/dtls/config-ccm-psk-tls1_2.h
+Next, we need to build Wakaama using the following steps. 
 
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
@@ -368,14 +370,14 @@ git checkout bugfix
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DDTLS_MBEDTLS=1 ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-ccm-psk-tls1_2.h" ..
 make
 ```
 
 Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
 
 ```
-examples/client/lwm2mclient -h localhost -n test -p 5684 -psk_identity="my-identity" -psk=0102030405
+./examples/client/lwm2mclient -h localhost -n test -p 5684 -psk_identity="my-identity" -psk=0102030405
 ```
 
 The parameters have the following meaning: 

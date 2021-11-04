@@ -1004,10 +1004,26 @@ void print_usage(void)
     fprintf(stdout, "  -c\t\tChange battery level over time.\r\n");
     fprintf(stdout, "  -S BYTES\tCoAP block size. Options: 16, 32, 64, 128, 256, 512, 1024. Default: %" PRIu16 "\r\n",
             LWM2M_COAP_DEFAULT_BLOCK_SIZE);
-#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
+#if defined WITH_TINYDTLS
     fprintf(stdout, "  -i STRING\tSet the device management or bootstrap server PSK identity. If not set use none secure mode\r\n");
     fprintf(stdout, "  -s HEXSTRING\tSet the device management or bootstrap server Pre-Shared-Key. If not set use none secure mode\r\n");
-#endif
+#endif /* WITH_TINYDTLS */
+
+#if defined(WITH_MBEDTLS)
+
+#if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
+    fprintf(stdout, "  -psk=HEXSTRING\r\n");
+    fprintf(stdout, "  -psk_identity=STRING\r\n");
+#endif /* MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_FS_IO)
+    fprintf(stdout, "  -ca_file=STRING\tThe single file containing the top-level CA(s) you fully trust\r\n");
+    fprintf(stdout, "  -ca_path=STRING\tThe path containing the top-level CA(s) you fully trust\r\n");
+    fprintf(stdout, "  -crt_file=STRING\tThe own cert and chain (in bottom to top order, top may be omitted)\r\n");
+    fprintf(stdout, "  -key_file=STRING\tThe own private key\r\n");
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
+
+#endif /* WITH_MBEDTLS */
     fprintf(stdout, "\r\n");
 }
 
@@ -1161,7 +1177,22 @@ int main(int argc, char *argv[])
             }
             server = argv[opt];
             param_match = 1;
-        }        
+        }
+#if defined WITH_TINYDTLS 
+        else if( strcmp( p, "-i" ) == 0 )
+        {
+            options.psk = q;
+            opt++;
+            continue;
+        }
+        else if( strcmp( p, "-s" ) == 0 )
+        {
+            data.psk_identity = (uint8_t*) strdup( (const char *) q);
+            data.psk_identity_len = (uint16_t) strlen( (const char *) data.psk_identity);
+            opt++;
+            continue;
+        }
+#endif /* WITH_TINYDTLS */
         else if( strcmp( p, "-p" ) == 0 )
         {
             opt++;
@@ -1209,7 +1240,7 @@ int main(int argc, char *argv[])
             *q++ = '\0';
         }
 
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_FS_IO)
         if( strcmp( p, "-ca_file" ) == 0 )
         {
             options.ca_file = q;
@@ -1228,9 +1259,9 @@ int main(int argc, char *argv[])
             opt++;
             continue;
         }
-#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
 
-#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
         if( strcmp( p, "-psk" ) == 0 )
         {
             options.psk = q;
@@ -1244,7 +1275,7 @@ int main(int argc, char *argv[])
             opt++;
             continue;
         }
-#endif /* WITH_TINYDTLS || ( WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED )*/
+#endif /* WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
         /* No parameter matches */
         if (param_match == 0)
@@ -1264,7 +1295,7 @@ int main(int argc, char *argv[])
     /*
      *This call an internal function that create an IPV6 socket on the port 5683.
      */
-    fprintf(stderr, "Trying to bind LWM2M Client to port %s\r\n", localPort);
+    fprintf(stderr, "Trying to bind LwM2M Client to port %s\r\n", localPort);
     data.sock = create_socket(localPort, data.addressFamily);
     if (data.sock < 0)
     {
