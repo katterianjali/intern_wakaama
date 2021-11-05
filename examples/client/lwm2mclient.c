@@ -89,6 +89,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#include "psa/crypto.h"
+#include "mbedtls/psa_util.h"
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
 #define MAX_PACKET_SIZE 2048
 #define DEFAULT_SERVER_IPV6 "[::1]"
 #define DEFAULT_SERVER_IPV4 "127.0.0.1"
@@ -249,6 +254,7 @@ struct options
     char *ca_file;        /* the file with the CA certificate(s)      */
     char *crt_file;       /* the file with the client certificate     */
     char *key_file;       /* the file with the client key             */
+    int key_opaque;       /* handle private key as if it were opaque  */
 } options;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
@@ -1023,6 +1029,10 @@ void print_usage(void)
     fprintf(stdout, "  -key_file=STRING\tThe own private key\r\n");
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
+    fprintf(stdout, "  -key_opaque=VALUE\tHandle your private key as if it were opaque. 0 for disabled\r\n"); 
+#endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_X509_CRT_PARSE_C */
+
 #endif /* WITH_MBEDTLS */
     fprintf(stdout, "\r\n");
 }
@@ -1072,6 +1082,10 @@ int main(int argc, char *argv[])
     mbedtls_pk_context pkey;
 #endif  /* MBEDTLS_X509_CRT_PARSE_C */
   
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_status_t status;
+#endif
+
 #endif /* WITH_MBEDTLS */
 
     bool secure_coap;
@@ -1113,6 +1127,9 @@ int main(int argc, char *argv[])
     data.addressFamily = AF_INET6;
 
     int param_match=0;
+
+    /* Setting default values for options */
+    options.key_opaque = 0; // do not use opaque keys
 
     opt = 1;
     while (opt < argc)
@@ -1261,6 +1278,15 @@ int main(int argc, char *argv[])
         }
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
+        if( strcmp( p, "-key_opaque" ) == 0 )
+        {
+            options.key_opaque = atoi( q );
+            opt++;
+            continue;
+        }
+#endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_X509_CRT_PARSE_C */
+
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
         if( strcmp( p, "-psk" ) == 0 )
         {
@@ -1286,6 +1312,17 @@ int main(int argc, char *argv[])
 
     }
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
+    status = psa_crypto_init();
+    if( status != PSA_SUCCESS )
+    {
+        fprintf(stderr, "Failed to initialize PSA Crypto implementation: %d\n",
+                         (int) status );
+        return -1;
+    }
+#endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
+
+
     if (!server)
     {
         server = (AF_INET == data.addressFamily ? DEFAULT_SERVER_IPV4 : DEFAULT_SERVER_IPV6);
@@ -1308,7 +1345,7 @@ int main(int argc, char *argv[])
      * Now the main function fill an array with each object, this list will be later passed to liblwm2m.
      * Those functions are located in their respective object file.
      */
-#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
     if (options.psk != NULL)
     {
         data.psk_len = strlen(options.psk) / 2;
@@ -1340,7 +1377,7 @@ int main(int argc, char *argv[])
     }
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
     /* Initialize the RNG and the session data */
     rng_init( &rng );
     ret = rng_seed( &rng, 0, name );
@@ -1350,24 +1387,25 @@ int main(int argc, char *argv[])
                    (unsigned int) -ret );
         return -1;
     }
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
+#if defined(WITH_TINYDTLS) || defined(WITH_MBEDTLS)
     sprintf (serverUri, "coaps://%s:%s", server, serverPort);
     secure_coap=true;
 #else
     sprintf (serverUri, "coap://%s:%s", server, serverPort);
     secure_coap=false;
-#endif
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
     /* Determine security mode */
-#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
     if (data.psk_identity != NULL && data.psk != NULL)
     {
         securityMode = LWM2M_SECURITY_MODE_PRE_SHARED_KEY;
     } else 
-#endif 
-#if defined WITH_MBEDTLS
+#endif /* WITH_TINYDTLS || (WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED ) */
+
+#if defined(WITH_MBEDTLS)
     if (secure_coap == true)
     {
         securityMode = LWM2M_SECURITY_MODE_CERTIFICATE;
@@ -1377,7 +1415,7 @@ int main(int argc, char *argv[])
         securityMode = LWM2M_SECURITY_MODE_NONE;
     }
 
-#if defined WITH_TINYDTLS || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
     if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
     {
 
@@ -1385,7 +1423,8 @@ int main(int argc, char *argv[])
                                         LWM2M_SECURITY_MODE_PRE_SHARED_KEY,
                                         bootstrapRequested);
     } else 
-#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
+#endif /* WITH_TINYDTLS || (WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) */
+
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
     if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE)
     {
@@ -1451,6 +1490,22 @@ int main(int argc, char *argv[])
         data.pkey = &pkey;
         data.cacert = &cacert;
         data.clicert = &clicert;
+
+
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
+    if( options.key_opaque != 0 )
+    {
+        data.key_slot = 0;
+
+        if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &data.key_slot,
+                                               PSA_ALG_ANY_HASH ) ) != 0 )
+        {
+            fprintf(stderr, " failed\n  !  "
+                            "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
+            return -1;
+        }
+    }
+#endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
 
         // Security relevant data is not stored in the Security Object 
         objArray[0] = get_security_object(serverId, serverUri, 
@@ -1865,6 +1920,13 @@ int main(int argc, char *argv[])
     free_object_conn_m(objArray[6]);
     free_object_conn_s(objArray[7]);
     acl_ctrl_free_object(objArray[8]);
+
+
+
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_destroy_key( data.key_slot );
+    mbedtls_psa_crypto_free( );
+#endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
 
 #ifdef MEMORY_TRACE
     if (g_quit == 1)

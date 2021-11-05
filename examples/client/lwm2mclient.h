@@ -132,7 +132,11 @@ typedef struct
     mbedtls_x509_crt * cacert;
     mbedtls_x509_crt * clicert;
     mbedtls_pk_context * pkey;
-#endif  /* MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
+    psa_key_id_t key_slot;
+#endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_X509_CRT_PARSE_C */
 
 #else /* WITH_MBEDTLS */
     int sock;

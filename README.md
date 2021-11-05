@@ -242,12 +242,17 @@ Refer to [examples/bootstrap_server/README](./examples/bootstrap_server/README) 
 
 DISCLAIMER: This code is experimental. Do not use in production system.
 
-To use MbedTLS with Wakaama one first has to decide what credentials to use. Currently, pre-shared secrets and X.509 certificates are supported. To keep the code size at a minimum, the Mbed TLS library offers fine-tuning using a configuration file. Two examples are provided in 
+The use of MbedTLS with Wakaama requires the mbedtls submodule. To include it use the following commands below to retrieve the sources.
+
+To use MbedTLS with Wakaama you have to decide what credential types to use. Currently, pre-shared secrets and X.509 certificates are supported. To keep the code size at a minimum, the Mbed TLS library offers fine-tuning using a configuration file. Two examples are provided in 
 
 - examples/shared/dtls/config-ccm-psk-tls1_2.h, and 
 - examples/shared/dtls/config-ccm-ecdsa-dtls1_2.h
 
-As the file names indicates, one configuration is tailored to the use of PSKs, while the second is used with ECC-based credentials. Feel free to create other configuration variants that fit your needs.
+As the file names indicate, one configuration is tailored to the use of PSKs, while the second is used with ECC-based credentials. Feel free to create other configuration variants that fit your needs.
+
+For use with the PSA Crypto API (for either PSKs or X.509 certificates) a separate configuration file is used, namely:
+- examples/shared/dtls/config-psa.h
 
 These configuration files are included in the cmake-based build process. It is important to match the configuration of the MbedTLS library with the use of the lwm2mclient parameter invocation. 
 
@@ -388,3 +393,12 @@ The parameters have the following meaning:
 - "-psk" contains the PSK.
 
 If everything works fine, you should be able to see a client being registered at the Leshan server and displayed in the list of registered clients.
+
+#### Use of the PSA Crypto API
+
+Conceptually, the use of the PSA Crypto API is similiar to the approaches described previously. As a major difference, a different config file is used, which configures the code to use different functionality. Below is the change to the cmake invocation to use the provided config file.
+
+```
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-psa.h" ..
+```
+
