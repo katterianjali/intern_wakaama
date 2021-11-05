@@ -66,6 +66,18 @@ uint8_t lwm2m_get_securityMode(lwm2m_context_t * lwm2mH, lwm2m_object_t * obj, i
     return securityMode;
 }
 
+#if defined(MBEDTLS_DEBUG_C)
+static void my_debug( void *ctx, int level,
+                      const char *file, int line,
+                      const char *str )
+{
+    ((void) level);
+
+    fprintf( (FILE *) ctx, "%s:%04d: %s", file, line, str );
+    fflush(  (FILE *) ctx  );
+}
+#endif /* MBEDTLS_DEBUG_C */
+
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 static unsigned char peer_crt_info[1024];
@@ -224,6 +236,30 @@ void * lwm2m_connect_server(uint16_t secObjInstID, void * userData)
         mbedtls_ssl_conf_ciphersuites(&conn->conf, client_data->force_ciphersuite);
     }
 
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    if( client_data->cid_len > 0 )
+    {
+        ret = mbedtls_ssl_conf_cid( &conn->conf, client_data->cid_len,
+                                    MBEDTLS_SSL_UNEXPECTED_CID_IGNORE );
+
+        if( ret != 0 )
+        {
+            fprintf(stderr, " failed\n  ! mbedtls_ssl_conf_cid_len returned -%#04x\n\n",
+                            (unsigned int) -ret );
+            mbedtls_net_free(&conn->server_fd);
+            mbedtls_ssl_config_free(&conn->conf);
+            mbedtls_ctr_drbg_free(&conn->ctr_drbg);
+            mbedtls_entropy_free(&conn->entropy);
+            mbedtls_ssl_free(&conn->ssl);
+            lwm2m_free(uri);
+            lwm2m_free(conn);
+            return NULL;
+        }
+    }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
     {
@@ -274,6 +310,10 @@ void * lwm2m_connect_server(uint16_t secObjInstID, void * userData)
     mbedtls_ssl_set_bio(&conn->ssl, &conn->server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
     // void mbedtls_ssl_conf_read_timeout( mbedtls_ssl_config *conf, uint32_t timeout ); //timeout millseconds
 
+#if defined(MBEDTLS_DEBUG_C)
+    mbedtls_ssl_conf_dbg( &conn->conf, my_debug, stdout );
+#endif /* MBEDTLS_DEBUG_C */
+
     mbedtls_ssl_set_timer_cb(&conn->ssl, &conn->timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -294,6 +334,30 @@ void * lwm2m_connect_server(uint16_t secObjInstID, void * userData)
         lwm2m_free(conn);
         return NULL;
     }
+
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    if (client_data->cid_len > 0)
+    {
+        if( ( ret = mbedtls_ssl_set_cid( &conn->ssl,
+                                         (client_data->cid_len > 0) ? MBEDTLS_SSL_CID_ENABLED : MBEDTLS_SSL_CID_DISABLED,
+                                         client_data->cid, 
+                                         client_data->cid_len ) ) != 0 )
+        {
+            fprintf(stderr, " failed\n  ! mbedtls_ssl_set_cid returned %d\n\n",
+                            ret );
+            mbedtls_net_free(&conn->server_fd);
+            mbedtls_ssl_config_free(&conn->conf);
+            mbedtls_ctr_drbg_free(&conn->ctr_drbg);
+            mbedtls_entropy_free(&conn->entropy);
+            mbedtls_ssl_free(&conn->ssl);
+            lwm2m_free(uri);
+            lwm2m_free(conn);
+            return NULL;
+        }
+    }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE)

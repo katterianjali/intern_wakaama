@@ -5,9 +5,13 @@
             "-p", "5684",
             "-n", "\"PolarSSL Test Client 2\"", 
             "-c",
-            "-ca_file=../../../certs/test-ca2.crt",
-            "-crt_file=../../../certs/cli2.crt",
-            "-key_file=../../../certs/cli2.key"
+            "-ca_file=\"../../../certs/test-ca2.crt\"",
+            "-crt_file=\"../../../certs/cli2.crt\"",
+            "-key_file=\"../../../certs/cli2.key\"",
+            "-key_opaque=0",
+            "-debug_level=5",
+            "-cid=1",
+            "-cid_val=\"010203\""
         ]
     }, 
     "cmake.configureArgs": [
@@ -15,7 +19,8 @@
         "-DLWM2M_SUPPORT_TLV=1", 
         "-DLWM2M_SUPPORT_JSON=1",
         "-DLWM2M_OLD_CONTENT_FORMAT_SUPPORT=1",
-        "-DLWM2M_SUPPORT_SENML_JSON=1"
+        "-DLWM2M_SUPPORT_SENML_JSON=1",
+        "-DMBEDTLS_CONFIG_FILE=/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-psa-cid.h"
     ]
 }
 

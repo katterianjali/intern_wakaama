@@ -128,7 +128,12 @@ typedef struct
     lwm2m_context_t * ctx;
 #if defined WITH_MBEDTLS
     int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
-    
+
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    unsigned char cid[MBEDTLS_SSL_CID_IN_LEN_MAX];
+    size_t cid_len;   
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt * cacert;
     mbedtls_x509_crt * clicert;

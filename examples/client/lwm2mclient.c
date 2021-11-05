@@ -258,6 +258,8 @@ struct options
     int key_opaque;       /* handle private key as if it were opaque  */
     int debug_level;      /* level of debugging                       */
     int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
+    int cid_enabled;            /* whether to use the CID extension or not  */
+    const char *cid_val;        /* the CID to use for incoming messages     */
 } options;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
@@ -852,6 +854,66 @@ static void prv_display_objects(lwm2m_context_t * lwm2mH,
     }
 }
 
+static int ascii2uc(const char c, unsigned char *uc)
+{
+    if( ( c >= '0' ) && ( c <= '9' ) )
+        *uc = c - '0';
+    else if( ( c >= 'a' ) && ( c <= 'f' ) )
+        *uc = c - 'a' + 10;
+    else if( ( c >= 'A' ) && ( c <= 'F' ) )
+        *uc = c - 'A' + 10;
+    else
+        return( -1 );
+
+    return( 0 );
+}
+
+/**
+ * \brief          This function decodes the hexadecimal representation of
+ *                 data.
+ *
+ * \note           The output buffer can be the same as the input buffer. For
+ *                 any other overlapping of the input and output buffers, the
+ *                 behavior is undefined.
+ *
+ * \param obuf     Output buffer.
+ * \param obufmax  Size in number of bytes of \p obuf.
+ * \param ibuf     Input buffer.
+ * \param len      The number of unsigned char written in \p obuf. This must
+ *                 not be \c NULL.
+ *
+ * \return         \c 0 on success.
+ * \return         \c -1 if the output buffer is too small or the input string
+ *                 is not a valid hexadecimal representation.
+ */
+int unhexify( unsigned char *obuf, size_t obufmax,
+              const char *ibuf, size_t *len )
+{
+    unsigned char uc, uc2;
+
+    *len = strlen( ibuf );
+
+    /* Must be even number of bytes. */
+    if ( ( *len ) & 1 )
+        return( -1 );
+    *len /= 2;
+
+    if ( (*len) > obufmax )
+        return( -1 );
+
+    while( *ibuf != 0 )
+    {
+        if ( ascii2uc( *(ibuf++), &uc ) != 0 )
+            return( -1 );
+
+        if ( ascii2uc( *(ibuf++), &uc2 ) != 0 )
+            return( -1 );
+
+        *(obuf++) = ( uc << 4 ) | uc2;
+    }
+
+    return( 0 );
+}
 #ifdef LWM2M_BOOTSTRAP
 static void prv_initiate_bootstrap(lwm2m_context_t * lwm2mH,
                                    char * buffer,
@@ -1023,6 +1085,10 @@ void print_usage(void)
 #if defined(MBEDTLS_DEBUG_C)
     fprintf(stdout, "  -debug_level=VALUE\tDefines the debug level\r\n");
 #endif /* MBEDTLS_DEBUG_C */
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    fprintf(stdout, "  -cid=VALUE\tDisable (0) or enable (1) the use of the DTLS Connection ID extension\r\n");
+    fprintf(stdout, "  -cid_val=HEXSTRING\tThe CID to use for incoming messages (in hex, without 0x)\r\n");
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
     fprintf(stdout, "  -psk_identity=STRING\tPSK identity\r\n");
@@ -1141,6 +1207,8 @@ int main(int argc, char *argv[])
     /* Setting default values for options */
     options.key_opaque = 0; // do not use opaque keys
     options.debug_level = 0; // no debugging
+    options.cid_enabled = MBEDTLS_SSL_CID_DISABLED;
+    options.cid_val = "";
 
     opt = 1;
     while (opt < argc)
@@ -1290,6 +1358,28 @@ int main(int argc, char *argv[])
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
 #if defined(WITH_MBEDTLS) 
 
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+        if( strcmp( p, "-cid" ) == 0 )
+        {
+            options.cid_enabled = atoi( q );
+            if( options.cid_enabled != MBEDTLS_SSL_CID_ENABLED && 
+                options.cid_enabled != MBEDTLS_SSL_CID_DISABLED )
+            {
+                print_usage();
+                return 0;
+            }
+            opt++;
+            continue;
+        }
+
+        if( strcmp( p, "-cid_val" ) == 0 )
+        {
+            options.cid_val = q;
+            opt++;
+            continue;
+        }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
 #if defined(MBEDTLS_DEBUG_C)
         if( strcmp( p, "-debug_level" ) == 0 )
         {
@@ -1426,6 +1516,20 @@ int main(int argc, char *argv[])
         }
     }
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+
+
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+    if (strlen(options.cid_val) > 0 )
+    {
+        if( unhexify( data.cid, sizeof( data.cid ),
+                    options.cid_val, &data.cid_len ) != 0 )
+        {
+            fprintf(stderr, "CID not valid\n" );
+            return -1;
+        }
+    }
+#endif /* WITH_MBEDTLS && MBEDTLS_SSL_DTLS_CONNECTION_ID */
+
 
 #if defined(MBEDTLS_DEBUG_C)
     mbedtls_debug_set_threshold( options.debug_level );
