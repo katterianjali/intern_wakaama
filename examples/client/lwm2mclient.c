@@ -66,6 +66,7 @@
 #include "mbedtls/build_info.h"
 #include "connection.h"
 #include "mbedtls/build_info.h"
+#include "mbedtls/debug.h"
 #ifdef MBEDTLS_X509_CRT_PARSE_C
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
@@ -255,6 +256,8 @@ struct options
     char *crt_file;       /* the file with the client certificate     */
     char *key_file;       /* the file with the client key             */
     int key_opaque;       /* handle private key as if it were opaque  */
+    int debug_level;      /* level of debugging                       */
+    int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
 } options;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
@@ -998,7 +1001,7 @@ static void close_backup_object()
 void print_usage(void)
 {
     fprintf(stdout, "Usage: lwm2mclient [OPTION]\r\n");
-    fprintf(stdout, "Launch a LWM2M client.\r\n");
+    fprintf(stdout, "Launch a LwM2M client.\r\n");
     fprintf(stdout, "Options:\r\n");
     fprintf(stdout, "  -n NAME\tSet the endpoint name of the Client. Default: testlwm2mclient\r\n");
     fprintf(stdout, "  -l PORT\tSet the local UDP port of the Client. Default: 56830\r\n");
@@ -1015,11 +1018,15 @@ void print_usage(void)
     fprintf(stdout, "  -s HEXSTRING\tSet the device management or bootstrap server Pre-Shared-Key. If not set use none secure mode\r\n");
 #endif /* WITH_TINYDTLS */
 
-#if defined(WITH_MBEDTLS)
+#if defined(WITH_MBEDTLS) 
+    fprintf(stdout, "  -force_ciphersuite=VALUE\tForce the use of a specific TLS ciphersuite\r\n");
+#if defined(MBEDTLS_DEBUG_C)
+    fprintf(stdout, "  -debug_level=VALUE\tDefines the debug level\r\n");
+#endif /* MBEDTLS_DEBUG_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
-    fprintf(stdout, "  -psk=HEXSTRING\r\n");
-    fprintf(stdout, "  -psk_identity=STRING\r\n");
+    fprintf(stdout, "  -psk_identity=STRING\tPSK identity\r\n");
+    fprintf(stdout, "  -psk=HEXSTRING\tPre-Shared Key\r\n");
 #endif /* MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_FS_IO)
@@ -1057,7 +1064,7 @@ int main(int argc, char *argv[])
     lwm2m_client_state_t previousState = STATE_INITIAL;
 #endif
 
-    uint8_t securityMode;
+    uint8_t securityMode = LWM2M_SECURITY_MODE_NONE;
     char serverUri[50];
     int serverId = 123;
 
@@ -1125,11 +1132,15 @@ int main(int argc, char *argv[])
 
     memset(&data, 0, sizeof(client_data_t));
     data.addressFamily = AF_INET6;
+#if defined(WITH_MBEDTLS)
+    data.force_ciphersuite[0] = 0; // default for ciphersuite
+#endif /* WITH_MBEDTLS */
 
     int param_match=0;
 
     /* Setting default values for options */
     options.key_opaque = 0; // do not use opaque keys
+    options.debug_level = 0; // no debugging
 
     opt = 1;
     while (opt < argc)
@@ -1275,9 +1286,49 @@ int main(int argc, char *argv[])
             options.key_file = q;
             opt++;
             continue;
-        }
+        }        
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
+#if defined(WITH_MBEDTLS) 
 
+#if defined(MBEDTLS_DEBUG_C)
+        if( strcmp( p, "-debug_level" ) == 0 )
+        {
+            options.debug_level = atoi( q );
+            if( options.debug_level < 0 || options.debug_level > 65535 )
+            {
+                print_usage();
+                return 0;
+            }
+            opt++;
+            continue;
+        }
+#endif /* MBEDTLS_DEBUG_C */
+
+        if( strcmp( p, "-force_ciphersuite" ) == 0 )
+        {
+            data.force_ciphersuite[0] = mbedtls_ssl_get_ciphersuite_id( q );
+
+            if( data.force_ciphersuite[0] == 0 )
+            {
+                const int *list;
+                list = mbedtls_ssl_list_ciphersuites();
+                while( *list )
+                {
+                    fprintf(stdout," %-42s", mbedtls_ssl_get_ciphersuite_name( *list ) );
+                    list++;
+                    if( !*list )
+                        break;
+                    fprintf(stdout," %s\n", mbedtls_ssl_get_ciphersuite_name( *list ) );
+                    list++;
+                }
+                fprintf(stdout,"\n");
+                return 0;
+            }
+            data.force_ciphersuite[1] = 0;
+            opt++;
+            continue;            
+        }
+#endif /* WITH_MBEDTLS */
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
         if( strcmp( p, "-key_opaque" ) == 0 )
         {
@@ -1321,7 +1372,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 #endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
-
 
     if (!server)
     {
@@ -1377,6 +1427,10 @@ int main(int argc, char *argv[])
     }
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
+#if defined(MBEDTLS_DEBUG_C)
+    mbedtls_debug_set_threshold( options.debug_level );
+#endif /* MBEDTLS_DEBUG_C */
+
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
     /* Initialize the RNG and the session data */
     rng_init( &rng );
@@ -1404,9 +1458,8 @@ int main(int argc, char *argv[])
         securityMode = LWM2M_SECURITY_MODE_PRE_SHARED_KEY;
     } else 
 #endif /* WITH_TINYDTLS || (WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED ) */
-
 #if defined(WITH_MBEDTLS)
-    if (secure_coap == true)
+    if (secure_coap == true && securityMode!=LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
     {
         securityMode = LWM2M_SECURITY_MODE_CERTIFICATE;
     } else 
@@ -1414,6 +1467,7 @@ int main(int argc, char *argv[])
     {   
         securityMode = LWM2M_SECURITY_MODE_NONE;
     }
+
 
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
     if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
@@ -1490,9 +1544,8 @@ int main(int argc, char *argv[])
         data.pkey = &pkey;
         data.cacert = &cacert;
         data.clicert = &clicert;
-
-
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
+        
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( options.key_opaque != 0 )
     {
         data.key_slot = 0;
@@ -1505,7 +1558,7 @@ int main(int argc, char *argv[])
             return -1;
         }
     }
-#endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
         // Security relevant data is not stored in the Security Object 
         objArray[0] = get_security_object(serverId, serverUri, 

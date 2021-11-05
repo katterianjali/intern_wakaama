@@ -328,7 +328,7 @@ Two parameters are passed into cmake:
 Once the build process is finished, the lwm2mclient application can be found in the examples/client subdirectory inside the build directory. 
 
 ```
-./examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file "../certs/test-ca2.key.der" -crt_file "../certs/cli2.crt.der" -key_file "../certs/cli2.key.der"
+./examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file="../certs/test-ca2.crt" -crt_file="../certs/cli2.crt" -key_file="../certs/cli2.key"
 ```
 
 The parameters have the following meaning:
@@ -401,4 +401,20 @@ Conceptually, the use of the PSA Crypto API is similiar to the approaches descri
 ```
 cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-psa.h" ..
 ```
+
+Once the build process is finished, use the following invocations. Note that the config-psa.h configuration file configures the stack to support both PSK as well as X.509-based credentials. Hence, it is necessary to indicate what TLS ciphersuite to use. This can be done with the -force_ciphersuite parameter. In the first example we use PSK-based authentication with the TLS-PSK-WITH-AES-256-CCM ciphersuite. The parameters -psk_identity and -psk have to be specified.
+
+```
+./examples/client/lwm2mclient -h localhost -n test -p 5684 -psk_identity="my-identity" -psk=0102030405 -force_ciphersuite=TLS-PSK-WITH-AES-256-CCM
+```
+
+Other appropriate ciphersuite settings are TLS-PSK-WITH-AES-128-CCM, and TLS-PSK-WITH-AES-256-CCM-8. It is important that Leshan is also configured with the ciphersuite selected by the client.
+
+Next, we use the X.509-based credential and select an appropriate ciphersuite, namelyTLS-ECDHE-ECDSA-WITH-AES-128-CCM
+
+```
+./examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file="../certs/test-ca2.crt" -crt_file="../certs/cli2.crt" -key_file="../certs/cli2.key" -force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM
+```
+
+Other appropriate ciphersuite setting is TLS-ECDHE-ECDSA-WITH-AES-256-CCM-8.
 
