@@ -1350,8 +1350,6 @@ int main(int argc, char *argv[])
     }
 
     /* Create a socket */
-    fprintf(stderr, "Creating a socket \r\n");
-
 #if defined LWM2M_CLIENT_MODE 
     data.sock = socket(data.addressFamily, SOCK_DGRAM, 0);
 #else 
@@ -1651,7 +1649,7 @@ int main(int argc, char *argv[])
          *    (eg. retransmission) and the time between the next operation
          */
         result = lwm2m_step(lwm2mH, &(tv.tv_sec));
-        fprintf(stdout, " -> State: ");
+
         switch (lwm2mH->state)
         {
         case STATE_INITIAL:
@@ -1758,10 +1756,10 @@ int main(int argc, char *argv[])
                     }
                     fprintf(stderr, "%zd bytes received from [%s]:%hu\r\n", numBytes, s, ntohs(port));
 
-                    /*
-                     * Display it in the STDERR
-                     */
+                    /* Display received data */
+#ifdef LWM2M_WITH_LOGS
                     output_buffer(stderr, buffer, (size_t)numBytes, 0);
+#endif /* LWM2M_WITH_LOGS */
 
                     connP = connectionlayer_find_connection(data.connLayer, &addr, addrLen);
                     if (connP != NULL)
@@ -1827,9 +1825,6 @@ int main(int argc, char *argv[])
     connectionlayer_free(data.connLayer);
 
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
-//    mbedtls_x509_crt_free( data.secContext->clicert );
-//    mbedtls_x509_crt_free( data.secContext->cacert );
-//    mbedtls_pk_free( data.secContext->pkey );
     lwm2m_free( options.clicert );
     lwm2m_free( options.cacert );
     lwm2m_free( options.pkey );
@@ -1852,16 +1847,16 @@ int main(int argc, char *argv[])
     free_object_conn_s(objArray[7]);
     acl_ctrl_free_object(objArray[8]);
 
-
-
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_destroy_key( data.secContext->key_slot );
     mbedtls_psa_crypto_free( );
 #endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(WITH_MBEDTLS) || defined(WITH_TINYDTLS)
-    lwm2m_free(data.secContext);
-#endif /* WITH_MBEDTLS || WITH_TINYDTLS */
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+    mbedtls_x509_crt_free( &data.secContext->mbedtls_cacert );
+    mbedtls_x509_crt_free( &data.secContext->mbedtls_clicert );
+    mbedtls_pk_free( &data.secContext->mbedtls_pkey );
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
 
 #ifdef MEMORY_TRACE
     if (g_quit == 1)

@@ -23,7 +23,9 @@ For reference, the following file-suffix notation is used:
 
 ### Creating Certificates for use with LwM2M 
 
-Below is a description of the various steps for creating certificates. It is important to match the CN names used in the certificates to what is later used in the configuration of the client and the servers. 
+Below is a description of the various steps for creating certificates. It is important to match the CN names used in the certificates to what is later used in the configuration of the client and the servers. Example certificates are, however, available in the certs directory so that this step can be omitted. 
+
+IMPORTANT: The certificates in the certs directory are for use in this example configuration. For real-world use you MUST create your own certificates. 
 
 #### Create the CA Certificate
 
@@ -191,14 +193,20 @@ Now, the configuration on the server-side is complete.
 
 ### Wakaama
 
-We need to download, and build Wakaama, as described in the README.md file of the Wakaama project. 
+We need to download, and build Wakaama, as described in the README.md file of the Wakaama project.
+Make sure that Wakaama is built with Bootstrap support. You can verify this by looking for 
+```
+add_compile_definitions(LWM2M_BOOTSTRAP)
+```
+in the CMakeLists.txt file in examples/client/CMakeLists.txt. 
+
 For the cmake build configuration use the following parameters:
 
 ```
-cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="examples/shared/dtls/config-ccm-ecdsa-dtls1_2.h" -DLWM2M_BOOTSTRAP=1 ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="examples/shared/dtls/config-ccm-ecdsa-dtls1_2.h" ..
 ```
 
-The MBEDTLS_CONFIG_FILE parameter needs to point to the correct location of your configuration file.
+NOTE: The MBEDTLS_CONFIG_FILE parameter needs to point to the correct location of your configuration file.
 
 Finally, invoke the lwm2mclient with the following parameters: 
  - "-h" indicates the hostname. Initially, the Lwm2M Client has to connect to the LwM2M Bootstrap Server. 

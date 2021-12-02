@@ -17,7 +17,7 @@ add_compile_definitions(LWM2M_SUPPORT_TLV)
 add_compile_definitions(LWM2M_SUPPORT_JSON)
 add_compile_definitions(LWM2M_OLD_CONTENT_FORMAT_SUPPORT)
 add_compile_definitions(LWM2M_SUPPORT_SENML_JSON)
-add_compile_definitions(LWM2M_WITH_LOGS)
+# add_compile_definitions(LWM2M_WITH_LOGS)
 
 if(LWM2M_VERSION VERSION_GREATER "1.0")
     add_compile_definitions(LWM2M_SUPPORT_SENML_JSON)
