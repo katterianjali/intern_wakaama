@@ -23,9 +23,7 @@ For reference, the following file-suffix notation is used:
 
 ### Creating Certificates for use with LwM2M 
 
-Below is a description of the various steps for creating certificates. It is important to match the CN names used in the certificates to what is later used in the configuration of the client and the servers. Example certificates are, however, available in the certs directory so that this step can be omitted. 
-
-IMPORTANT: The certificates in the certs directory are for use in this example configuration. For real-world use you MUST create your own certificates. 
+Below is a description of the various steps for creating certificates. It is important to match the CN names used in the certificates to what is later used in the configuration of the client and the servers. 
 
 #### Create the CA Certificate
 
