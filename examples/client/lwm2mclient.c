@@ -59,12 +59,16 @@
 #include "lwm2mclient.h"
 #include "liblwm2m.h"
 #include "commandline.h"
-#ifdef WITH_TINYDTLS
-#include "tinydtlsconnection.h"
-#elif defined WITH_MBEDTLS
-#include "mbedtlsconnection.h"
-#include "mbedtls/build_info.h"
+
+#if defined(DTLS)
+#include "dtlsconnection.h"
+#endif
+
 #include "connection.h"
+#include "object_utils.h"
+
+#if defined(WITH_MBEDTLS)
+#include "mbedtls/build_info.h"
 #include "mbedtls/build_info.h"
 #include "mbedtls/debug.h"
 #ifdef MBEDTLS_X509_CRT_PARSE_C
@@ -72,7 +76,7 @@
 #include "mbedtls/x509_crt.h"
 #include "mbedtls_random.h"
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-#endif
+#endif /* WITH_MBEDTLS */
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -104,164 +108,6 @@ static int g_quit = 0;
 
 #define OBJ_COUNT 9
 lwm2m_object_t * objArray[OBJ_COUNT];
-
-
-/* This is generated from tests/data_files/test-ca2.crt.der using `xxd -i`. */
-/* BEGIN FILE binary macro TEST_CA_CRT_EC_DER tests/data_files/test-ca2.crt.der */
-#define TEST_CA_CRT_EC_DER {                                                 \
-  0x30, 0x82, 0x02, 0x04, 0x30, 0x82, 0x01, 0x88, 0xa0, 0x03, 0x02, 0x01,    \
-  0x02, 0x02, 0x09, 0x00, 0xc1, 0x43, 0xe2, 0x7e, 0x62, 0x43, 0xcc, 0xe8,    \
-  0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02,    \
-  0x05, 0x00, 0x30, 0x3e, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04,    \
-  0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30, 0x0f, 0x06, 0x03, 0x55,    \
-  0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c,    \
-  0x31, 0x1c, 0x30, 0x1a, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x13, 0x50,    \
-  0x6f, 0x6c, 0x61, 0x72, 0x73, 0x73, 0x6c, 0x20, 0x54, 0x65, 0x73, 0x74,    \
-  0x20, 0x45, 0x43, 0x20, 0x43, 0x41, 0x30, 0x1e, 0x17, 0x0d, 0x31, 0x39,    \
-  0x30, 0x32, 0x31, 0x30, 0x31, 0x34, 0x34, 0x34, 0x30, 0x30, 0x5a, 0x17,    \
-  0x0d, 0x32, 0x39, 0x30, 0x32, 0x31, 0x30, 0x31, 0x34, 0x34, 0x34, 0x30,    \
-  0x30, 0x5a, 0x30, 0x3e, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04,    \
-  0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30, 0x0f, 0x06, 0x03, 0x55,    \
-  0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c,    \
-  0x31, 0x1c, 0x30, 0x1a, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x13, 0x50,    \
-  0x6f, 0x6c, 0x61, 0x72, 0x73, 0x73, 0x6c, 0x20, 0x54, 0x65, 0x73, 0x74,    \
-  0x20, 0x45, 0x43, 0x20, 0x43, 0x41, 0x30, 0x76, 0x30, 0x10, 0x06, 0x07,    \
-  0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x05, 0x2b, 0x81, 0x04,    \
-  0x00, 0x22, 0x03, 0x62, 0x00, 0x04, 0xc3, 0xda, 0x2b, 0x34, 0x41, 0x37,    \
-  0x58, 0x2f, 0x87, 0x56, 0xfe, 0xfc, 0x89, 0xba, 0x29, 0x43, 0x4b, 0x4e,    \
-  0xe0, 0x6e, 0xc3, 0x0e, 0x57, 0x53, 0x33, 0x39, 0x58, 0xd4, 0x52, 0xb4,    \
-  0x91, 0x95, 0x39, 0x0b, 0x23, 0xdf, 0x5f, 0x17, 0x24, 0x62, 0x48, 0xfc,    \
-  0x1a, 0x95, 0x29, 0xce, 0x2c, 0x2d, 0x87, 0xc2, 0x88, 0x52, 0x80, 0xaf,    \
-  0xd6, 0x6a, 0xab, 0x21, 0xdd, 0xb8, 0xd3, 0x1c, 0x6e, 0x58, 0xb8, 0xca,    \
-  0xe8, 0xb2, 0x69, 0x8e, 0xf3, 0x41, 0xad, 0x29, 0xc3, 0xb4, 0x5f, 0x75,    \
-  0xa7, 0x47, 0x6f, 0xd5, 0x19, 0x29, 0x55, 0x69, 0x9a, 0x53, 0x3b, 0x20,    \
-  0xb4, 0x66, 0x16, 0x60, 0x33, 0x1e, 0xa3, 0x50, 0x30, 0x4e, 0x30, 0x0c,    \
-  0x06, 0x03, 0x55, 0x1d, 0x13, 0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xff,    \
-  0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14, 0x9d,    \
-  0x6d, 0x20, 0x24, 0x49, 0x01, 0x3f, 0x2b, 0xcb, 0x78, 0xb5, 0x19, 0xbc,    \
-  0x7e, 0x24, 0xc9, 0xdb, 0xfb, 0x36, 0x7c, 0x30, 0x1f, 0x06, 0x03, 0x55,    \
-  0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x9d, 0x6d, 0x20, 0x24,    \
-  0x49, 0x01, 0x3f, 0x2b, 0xcb, 0x78, 0xb5, 0x19, 0xbc, 0x7e, 0x24, 0xc9,    \
-  0xdb, 0xfb, 0x36, 0x7c, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce,    \
-  0x3d, 0x04, 0x03, 0x02, 0x05, 0x00, 0x03, 0x68, 0x00, 0x30, 0x65, 0x02,    \
-  0x30, 0x51, 0xca, 0xae, 0x30, 0x0f, 0xa4, 0x70, 0x74, 0x04, 0xdd, 0x5a,    \
-  0x2c, 0x7f, 0x13, 0xc1, 0xc2, 0x77, 0xbe, 0x1d, 0x00, 0xc5, 0xe2, 0x99,    \
-  0x8f, 0x7d, 0x26, 0x45, 0xd3, 0x8a, 0x06, 0x68, 0x3f, 0x8c, 0xb4, 0xb7,    \
-  0xad, 0x4d, 0xe0, 0xf1, 0x54, 0x01, 0x1e, 0x99, 0xfc, 0xb0, 0xe4, 0xd3,    \
-  0x07, 0x02, 0x31, 0x00, 0xdc, 0x4f, 0x3b, 0x90, 0x1e, 0xae, 0x29, 0x99,    \
-  0x84, 0x28, 0xcc, 0x7b, 0x47, 0x78, 0x09, 0x31, 0xdf, 0xd6, 0x01, 0x59,    \
-  0x30, 0x5e, 0xf4, 0xf8, 0x8a, 0x84, 0x3f, 0xea, 0x39, 0x54, 0x7b, 0x08,    \
-  0xa7, 0x60, 0xaa, 0xbd, 0xf9, 0x5b, 0xd1, 0x51, 0x96, 0x14, 0x2e, 0x65,    \
-  0xf5, 0xae, 0x1c, 0x42                                                     \
-}
-/* END FILE */
-
-/* This is generated from tests/data_files/cli2.key.der using `xxd -i`. */
-/* BEGIN FILE binary macro TEST_CLI_KEY_EC_DER tests/data_files/cli2.key.der */
-#define TEST_CLI_KEY_EC_DER {                                                \
-    0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20, 0xf6, 0xf7, 0x86, 0x64, 0xf1,  \
-    0x67, 0x7f, 0xe6, 0x64, 0x8d, 0xef, 0xca, 0x4e, 0xe9, 0xdd, 0x4d, 0xf0,  \
-    0x05, 0xff, 0x96, 0x22, 0x8a, 0x7a, 0x84, 0x38, 0x64, 0x17, 0x32, 0x61,  \
-    0x98, 0xb7, 0x2a, 0xa0, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,  \
-    0x03, 0x01, 0x07, 0xa1, 0x44, 0x03, 0x42, 0x00, 0x04, 0x57, 0xe5, 0xae,  \
-    0xb1, 0x73, 0xdf, 0xd3, 0xac, 0xbb, 0x93, 0xb8, 0x81, 0xff, 0x12, 0xae,  \
-    0xee, 0xe6, 0x53, 0xac, 0xce, 0x55, 0x53, 0xf6, 0x34, 0x0e, 0xcc, 0x2e,  \
-    0xe3, 0x63, 0x25, 0x0b, 0xdf, 0x98, 0xe2, 0xf3, 0x5c, 0x60, 0x36, 0x96,  \
-    0xc0, 0xd5, 0x18, 0x14, 0x70, 0xe5, 0x7f, 0x9f, 0xd5, 0x4b, 0x45, 0x18,  \
-    0xe5, 0xb0, 0x6c, 0xd5, 0x5c, 0xf8, 0x96, 0x8f, 0x87, 0x70, 0xa3, 0xe4,  \
-    0xc7                                                                     \
-}
-/* END FILE */
-
-
-/* This is generated from tests/data_files/cli2.crt.der using `xxd -i`. */
-/* BEGIN FILE binary macro TEST_CLI_CRT_EC_DER tests/data_files/cli2.crt.der */
-#define TEST_CLI_CRT_EC_DER {                                                \
-    0x30, 0x82, 0x01, 0xdf, 0x30, 0x82, 0x01, 0x63, 0xa0, 0x03, 0x02, 0x01,  \
-    0x02, 0x02, 0x01, 0x0d, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce,  \
-    0x3d, 0x04, 0x03, 0x02, 0x05, 0x00, 0x30, 0x3e, 0x31, 0x0b, 0x30, 0x09,  \
-    0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30,  \
-    0x0f, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61,  \
-    0x72, 0x53, 0x53, 0x4c, 0x31, 0x1c, 0x30, 0x1a, 0x06, 0x03, 0x55, 0x04,  \
-    0x03, 0x0c, 0x13, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c, 0x20,  \
-    0x54, 0x65, 0x73, 0x74, 0x20, 0x45, 0x43, 0x20, 0x43, 0x41, 0x30, 0x1e,  \
-    0x17, 0x0d, 0x31, 0x39, 0x30, 0x32, 0x31, 0x30, 0x31, 0x34, 0x34, 0x34,  \
-    0x30, 0x30, 0x5a, 0x17, 0x0d, 0x32, 0x39, 0x30, 0x32, 0x31, 0x30, 0x31,  \
-    0x34, 0x34, 0x34, 0x30, 0x30, 0x5a, 0x30, 0x41, 0x31, 0x0b, 0x30, 0x09,  \
-    0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x4e, 0x4c, 0x31, 0x11, 0x30,  \
-    0x0f, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x08, 0x50, 0x6f, 0x6c, 0x61,  \
-    0x72, 0x53, 0x53, 0x4c, 0x31, 0x1f, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x04,  \
-    0x03, 0x0c, 0x16, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x53, 0x53, 0x4c, 0x20,  \
-    0x54, 0x65, 0x73, 0x74, 0x20, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x20,  \
-    0x32, 0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d,  \
-    0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07,  \
-    0x03, 0x42, 0x00, 0x04, 0x57, 0xe5, 0xae, 0xb1, 0x73, 0xdf, 0xd3, 0xac,  \
-    0xbb, 0x93, 0xb8, 0x81, 0xff, 0x12, 0xae, 0xee, 0xe6, 0x53, 0xac, 0xce,  \
-    0x55, 0x53, 0xf6, 0x34, 0x0e, 0xcc, 0x2e, 0xe3, 0x63, 0x25, 0x0b, 0xdf,  \
-    0x98, 0xe2, 0xf3, 0x5c, 0x60, 0x36, 0x96, 0xc0, 0xd5, 0x18, 0x14, 0x70,  \
-    0xe5, 0x7f, 0x9f, 0xd5, 0x4b, 0x45, 0x18, 0xe5, 0xb0, 0x6c, 0xd5, 0x5c,  \
-    0xf8, 0x96, 0x8f, 0x87, 0x70, 0xa3, 0xe4, 0xc7, 0xa3, 0x4d, 0x30, 0x4b,  \
-    0x30, 0x09, 0x06, 0x03, 0x55, 0x1d, 0x13, 0x04, 0x02, 0x30, 0x00, 0x30,  \
-    0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14, 0x7a, 0x00,  \
-    0x5f, 0x86, 0x64, 0xfc, 0xe0, 0x5d, 0xe5, 0x11, 0x10, 0x3b, 0xb2, 0xe6,  \
-    0x3b, 0xc4, 0x26, 0x3f, 0xcf, 0xe2, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d,  \
-    0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x9d, 0x6d, 0x20, 0x24, 0x49,  \
-    0x01, 0x3f, 0x2b, 0xcb, 0x78, 0xb5, 0x19, 0xbc, 0x7e, 0x24, 0xc9, 0xdb,  \
-    0xfb, 0x36, 0x7c, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,  \
-    0x04, 0x03, 0x02, 0x05, 0x00, 0x03, 0x68, 0x00, 0x30, 0x65, 0x02, 0x31,  \
-    0x00, 0xca, 0xa6, 0x7b, 0x80, 0xca, 0x32, 0x57, 0x54, 0x96, 0x99, 0x43,  \
-    0x11, 0x3f, 0x50, 0xe8, 0x4a, 0x6d, 0xad, 0xee, 0xee, 0x51, 0x62, 0xa1,  \
-    0xb0, 0xb3, 0x85, 0xfb, 0x33, 0xe4, 0x28, 0x39, 0x5f, 0xce, 0x92, 0x24,  \
-    0x25, 0x81, 0x05, 0x81, 0xc9, 0x68, 0x0c, 0x71, 0x98, 0xc3, 0xcd, 0x2e,  \
-    0x22, 0x02, 0x30, 0x35, 0xfb, 0x72, 0x3d, 0x7b, 0x1a, 0x6d, 0x3a, 0x8c,  \
-    0x33, 0xb8, 0x84, 0x1e, 0x05, 0x69, 0x5f, 0xf1, 0x91, 0xa3, 0x32, 0xa4,  \
-    0x95, 0x8f, 0x72, 0x40, 0x8f, 0xf9, 0x7a, 0x80, 0x3a, 0x80, 0x65, 0xbb,  \
-    0x63, 0xe8, 0xa6, 0xb8, 0x64, 0x7f, 0xa1, 0xaa, 0x39, 0xc9, 0x23, 0x9b,  \
-    0x6b, 0xd5, 0x64                           \
-}
-/* END FILE */
-
-const unsigned char mbedtls_test_cli_key_ec_der[]  = TEST_CLI_KEY_EC_DER;
-const unsigned char mbedtls_test_ca_crt_ec_der[]   = TEST_CA_CRT_EC_DER;
-const unsigned char mbedtls_test_cli_crt_ec_der[]  = TEST_CLI_CRT_EC_DER;
-
-/* List of all available CA certificates in DER format */
-const unsigned char * mbedtls_test_cas_der[] = {
-#if defined(MBEDTLS_ECDSA_C)
-    mbedtls_test_ca_crt_ec_der,
-#endif /* MBEDTLS_ECDSA_C */
-    NULL
-};
-
-const size_t mbedtls_test_cas_der_len[] = {
-#if defined(MBEDTLS_ECDSA_C)
-    sizeof( mbedtls_test_ca_crt_ec_der ),
-#endif /* MBEDTLS_ECDSA_C */
-    0
-};
-const size_t mbedtls_test_cli_key_ec_der_len =
-    sizeof( mbedtls_test_cli_key_ec_der );
-const size_t mbedtls_test_ca_crt_ec_der_len =
-    sizeof( mbedtls_test_ca_crt_ec_der );
-const size_t mbedtls_test_cli_crt_ec_der_len =
-    sizeof( mbedtls_test_cli_crt_ec_der );
-/*
- * global options
- */
-#if defined WITH_TINYDTLS || defined WITH_MBEDTLS
-struct options
-{
-    char *psk;            /* the pre-shared key input                 */
-    char *ca_file;        /* the file with the CA certificate(s)      */
-    char *crt_file;       /* the file with the client certificate     */
-    char *key_file;       /* the file with the client key             */
-    int key_opaque;       /* handle private key as if it were opaque  */
-    int debug_level;      /* level of debugging                       */
-    int force_ciphersuite[2];   /* protocol/ciphersuite to use, or all      */
-    int cid_enabled;            /* whether to use the CID extension or not  */
-    const char *cid_val;        /* the CID to use for incoming messages     */
-} options;
-#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
 
 // only backup security and server objects
@@ -322,7 +168,7 @@ void handle_value_changed(lwm2m_context_t * lwm2mH,
                 lwm2m_data_encode_instances(subDataP, 1, dataP);
             }
             else
-#endif
+#endif /* LWM2M_VERSION_1_0 */
             {
                 lwm2m_data_encode_nstring(value, valueLength, dataP);
             }
@@ -363,40 +209,29 @@ void handle_value_changed(lwm2m_context_t * lwm2mH,
         fprintf(stderr, "Object not found !\n");
     }
 }
-#ifndef WITH_MBEDTLS
-#ifdef WITH_TINYDTLS
-void * lwm2m_connect_server(uint16_t secObjInstID,
-                            void * userData)
+
+int print_bytestr(const uint8_t *bytes, size_t len)
 {
-  client_data_t * dataP;
-  lwm2m_list_t * instance;
-  dtls_connection_t * newConnP = NULL;
-  dataP = (client_data_t *)userData;
-  lwm2m_object_t  * securityObj = dataP->securityObjP;
+    if (bytes == NULL)
+        return( -1 );
 
-  instance = LWM2M_LIST_FIND(dataP->securityObjP->instanceList, secObjInstID);
-  if (instance == NULL) return NULL;
-
-
-  newConnP = connection_create(dataP->connList, dataP->sock, securityObj, instance->id, dataP->lwm2mH, dataP->addressFamily);
-  if (newConnP == NULL)
-  {
-      fprintf(stderr, "Connection creation failed.\n");
-      return NULL;
-  }
-
-  dataP->connList = newConnP;
-  return (void *)newConnP;
+    for(unsigned int idx=0; idx < len; idx++)
+    {
+        fprintf(stderr, "%02x", bytes[idx]);
+    }
+    return( 0 );
 }
-#else
-void * lwm2m_connect_server(uint16_t secObjInstID,
-                            void * userData)
-{
-    client_data_t * dataP;
-    char * uri;
-    char * host;
-    char * port;
-    connection_t * newConnP = NULL;
+
+
+
+void *lwm2m_connect_server(uint16_t secObjInstID, void *userData) {
+    int securityMode = 0;
+    int ret = 0;
+    client_data_t *dataP;
+    char *uri;
+    char *host;
+    char *port;
+    connection_t *newConnP = NULL;
 
     dataP = (client_data_t *)userData;
 
@@ -431,63 +266,36 @@ void * lwm2m_connect_server(uint16_t secObjInstID,
     port++;
 
     fprintf(stderr, "Opening connection to server at %s:%s\r\n", host, port);
-    newConnP = connection_create(dataP->connList, dataP->sock, host, port, dataP->addressFamily);
+    ret = security_get_security_mode(dataP->ctx, secObjInstID, &securityMode);
+    if (ret <= 0) {
+        goto exit;
+    }
+    if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY || securityMode == LWM2M_SECURITY_MODE_CERTIFICATE) {
+#if defined(DTLS)
+        newConnP = (connection_t *)dtlsconnection_create(dataP->connLayer, secObjInstID, dataP->sock, host, port,
+                                                         dataP->addressFamily, securityMode, dataP->secContext);
+#endif
+    } else if (securityMode == LWM2M_SECURITY_MODE_NONE) {
+        newConnP = connection_create(dataP->connLayer, dataP->sock, host, port, dataP->addressFamily);
+    }
+
     if (newConnP == NULL) {
         fprintf(stderr, "Connection creation failed.\r\n");
-    }
-    else {
-        dataP->connList = newConnP;
     }
 
 exit:
     lwm2m_free(uri);
     return (void *)newConnP;
 }
-#endif
 
-void lwm2m_close_connection(void * sessionH,
-                            void * userData)
-{
-    client_data_t * app_data;
-#ifdef WITH_TINYDTLS
-    dtls_connection_t * targetP;
-#else
-    connection_t * targetP;
-#endif
+void lwm2m_close_connection(void *sessionH, void *userData) {
+    client_data_t *app_data;
+    connection_t *targetP;
 
     app_data = (client_data_t *)userData;
-#ifdef WITH_TINYDTLS
-    targetP = (dtls_connection_t *)sessionH;
-#else
     targetP = (connection_t *)sessionH;
-#endif
-
-    if (targetP == app_data->connList)
-    {
-        app_data->connList = targetP->next;
-        lwm2m_free(targetP);
-    }
-    else
-    {
-#ifdef WITH_TINYDTLS
-        dtls_connection_t * parentP;
-#else
-        connection_t * parentP;
-#endif
-
-        parentP = app_data->connList;
-        while (parentP != NULL && parentP->next != targetP)
-        {
-            parentP = parentP->next;
-        }
-        if (parentP != NULL)
-        {
-            parentP->next = targetP->next;
-            lwm2m_free(targetP);
-        }
-    }
+    connectionlayer_free_connection(app_data->connLayer, targetP);
 }
-#endif
 
 static void prv_output_servers(lwm2m_context_t * lwm2mH,
                                char * buffer,
@@ -812,6 +620,7 @@ static void prv_remove(lwm2m_context_t * lwm2mH,
     return;
 }
 
+
 static void prv_display_objects(lwm2m_context_t * lwm2mH,
                                 char * buffer,
                                 void * user_data)
@@ -854,6 +663,7 @@ static void prv_display_objects(lwm2m_context_t * lwm2mH,
     }
 }
 
+
 static int ascii2uc(const char c, unsigned char *uc)
 {
     if( ( c >= '0' ) && ( c <= '9' ) )
@@ -867,6 +677,7 @@ static int ascii2uc(const char c, unsigned char *uc)
 
     return( 0 );
 }
+
 
 /**
  * \brief          This function decodes the hexadecimal representation of
@@ -933,6 +744,7 @@ static void prv_initiate_bootstrap(lwm2m_context_t * lwm2mH,
         targetP = targetP->next;
     }
 }
+
 
 static void prv_display_backup(lwm2m_context_t * lwm2mH,
                                char * buffer,
@@ -1058,7 +870,58 @@ static void close_backup_object()
         }
     }
 }
-#endif /* */
+#endif /* LWM2M_BOOTSTRAP */
+
+
+#define PARAMETER_ERROR -1
+#define FILE_IO_ERROR -2
+#define ALLOC_FAILED -3
+
+int load_pem_file( const char *path, unsigned char **buf, size_t *n )
+{
+    FILE *f;
+    long size;
+
+    if ( path == NULL ) return PARAMETER_ERROR;
+    if ( buf == NULL ) return PARAMETER_ERROR;
+    if ( n == NULL ) return PARAMETER_ERROR;
+
+    if( ( f = fopen( path, "rb" ) ) == NULL )
+        return( FILE_IO_ERROR );
+
+    fseek( f, 0, SEEK_END );
+    if( ( size = ftell( f ) ) == -1 )
+    {
+        fclose( f );
+        return( FILE_IO_ERROR );
+    }
+    fseek( f, 0, SEEK_SET );
+
+    *n = (size_t) size;
+
+    if( *n + 1 == 0 ||
+        ( *buf = malloc( *n + 1 ) ) == NULL )
+    {
+        fclose( f );
+        return( ALLOC_FAILED );
+    }
+
+    if( fread( *buf, 1, *n, f ) != *n )
+    {
+        fclose( f );
+
+        memset( *buf, 0 , *n );
+        free( *buf );
+
+        return( FILE_IO_ERROR );
+    }
+
+    fclose( f );
+
+    (*buf)[*n] = '\0';
+    *n=*n+1;
+    return 0;
+}
 
 void print_usage(void)
 {
@@ -1069,7 +932,8 @@ void print_usage(void)
     fprintf(stdout, "  -l PORT\tSet the local UDP port of the Client. Default: 56830\r\n");
     fprintf(stdout, "  -h HOST\tSet the hostname of the LWM2M Server to connect to. Default: localhost\r\n");
     fprintf(stdout, "  -p PORT\tSet the port of the LWM2M Server to connect to. Default: "LWM2M_STANDARD_PORT_STR"\r\n");
-    fprintf(stdout, "  -4\t\tUse IPv4 connection. Default: IPv6 connection\r\n");
+    fprintf(stdout, "  -4\t\tUse IPv4. Default: IPv6 and IPv4\r\n");
+    fprintf(stdout, "  -6\t\tUse IPv6. Default: IPv6 and IPv4\r\n");
     fprintf(stdout, "  -t TIME\tSet the lifetime of the Client. Default: 300\r\n");
     fprintf(stdout, "  -b\t\tBootstrap requested.\r\n");
     fprintf(stdout, "  -c\t\tChange battery level over time.\r\n");
@@ -1113,6 +977,7 @@ void print_usage(void)
 int main(int argc, char *argv[])
 {
     client_data_t data;
+    sec_context_t options;
     int result;
     lwm2m_context_t * lwm2mH = NULL;
     const char * localPort = "56830";
@@ -1133,6 +998,19 @@ int main(int argc, char *argv[])
     uint8_t securityMode = LWM2M_SECURITY_MODE_NONE;
     char serverUri[50];
     int serverId = 123;
+    char *psk = NULL;
+    char *cid = NULL;
+
+    memset(&data, 0, sizeof(client_data_t));
+
+#if defined(WITH_TINYDTLS) || defined(WITH_MBEDTLS)
+    data.secContext=(sec_context_t*)malloc(sizeof(sec_context_t));
+    if (data.secContext==NULL)
+    {
+            fprintf(stdout, "Not enough memory.\r\n ");
+            return(-1);
+    }
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
 #if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     /* PSK-based security mode */
@@ -1145,25 +1023,16 @@ int main(int argc, char *argv[])
 #endif /* MBEDTLS_X509_CRT_PARSE_C */ 
 
     int ret;
-
-    options.ca_file = "";
-    options.crt_file = "";
-    options.key_file = "";
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    mbedtls_x509_crt cacert;
-    mbedtls_x509_crt clicert;
-    mbedtls_pk_context pkey;
-#endif  /* MBEDTLS_X509_CRT_PARSE_C */
   
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_status_t status;
 #endif
 
 #endif /* WITH_MBEDTLS */
-
-    bool secure_coap;
-
     char *p, *q;
+    bool secure_coap;
+    int param_match=0;
+
     /*
      * The function start by setting up the command line interface (which may or not be useful depending on your project)
      *
@@ -1196,19 +1065,17 @@ int main(int argc, char *argv[])
             COMMAND_END_LIST
     };
 
-    memset(&data, 0, sizeof(client_data_t));
-    data.addressFamily = AF_INET6;
-#if defined(WITH_MBEDTLS)
-    data.force_ciphersuite[0] = 0; // default for ciphersuite
-#endif /* WITH_MBEDTLS */
-
-    int param_match=0;
+    // Three options for the address family: AF_INET, AF_INET6 or AF_UNSPEC
+    data.addressFamily = AF_INET;
 
     /* Setting default values for options */
     options.key_opaque = 0; // do not use opaque keys
     options.debug_level = 0; // no debugging
     options.cid_enabled = MBEDTLS_SSL_CID_DISABLED;
-    options.cid_val = "";
+    options.ca_file = "";
+    options.crt_file = "";
+    options.key_file = "";
+    options.force_ciphersuite[0] = 0; // default for ciphersuite
 
     opt = 1;
     while (opt < argc)
@@ -1218,7 +1085,11 @@ int main(int argc, char *argv[])
         if( strcmp( p, "-b" ) == 0 )
         {
             bootstrapRequested = true;
+#if defined(WITH_MBEDTLS)
+            if (!serverPortChanged) serverPort = LWM2M_DTLS_BSSERVER_PORT_STR;
+#else            
             if (!serverPortChanged) serverPort = LWM2M_BSSERVER_PORT_STR;
+#endif /* WITH_MBEDTLS */
             param_match = 1;
         }
         else if( strcmp( p, "-c" ) == 0 )
@@ -1277,14 +1148,13 @@ int main(int argc, char *argv[])
 #if defined WITH_TINYDTLS 
         else if( strcmp( p, "-i" ) == 0 )
         {
-            options.psk = q;
+            psk = q;
             opt++;
             continue;
         }
         else if( strcmp( p, "-s" ) == 0 )
         {
-            data.psk_identity = (uint8_t*) strdup( (const char *) q);
-            data.psk_identity_len = (uint16_t) strlen( (const char *) data.psk_identity);
+            psk_identity = q;
             opt++;
             continue;
         }
@@ -1305,7 +1175,12 @@ int main(int argc, char *argv[])
         {
             data.addressFamily = AF_INET;
             param_match = 1;
-        } 
+        }
+        else if( strcmp( p, "-6" ) == 0 )
+        {
+            data.addressFamily = AF_INET6;
+            param_match = 1;
+        }        
         else if( strcmp( p, "-S" ) == 0 )
         {
             param_match = 1;
@@ -1374,7 +1249,7 @@ int main(int argc, char *argv[])
 
         if( strcmp( p, "-cid_val" ) == 0 )
         {
-            options.cid_val = q;
+            cid = q;
             opt++;
             continue;
         }
@@ -1396,9 +1271,9 @@ int main(int argc, char *argv[])
 
         if( strcmp( p, "-force_ciphersuite" ) == 0 )
         {
-            data.force_ciphersuite[0] = mbedtls_ssl_get_ciphersuite_id( q );
+            options.force_ciphersuite[0] = mbedtls_ssl_get_ciphersuite_id( q );
 
-            if( data.force_ciphersuite[0] == 0 )
+            if( options.force_ciphersuite[0] == 0 )
             {
                 const int *list;
                 list = mbedtls_ssl_list_ciphersuites();
@@ -1414,9 +1289,9 @@ int main(int argc, char *argv[])
                 fprintf(stdout,"\n");
                 return 0;
             }
-            data.force_ciphersuite[1] = 0;
+            options.force_ciphersuite[1] = 0;
             opt++;
-            continue;            
+            continue;
         }
 #endif /* WITH_MBEDTLS */
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -1431,14 +1306,13 @@ int main(int argc, char *argv[])
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
         if( strcmp( p, "-psk" ) == 0 )
         {
-            options.psk = q;
+            psk = q;
             opt++;
             continue;
         }
         if( strcmp( p, "-psk_identity" ) == 0 )
         {
-            data.psk_identity = (uint8_t*) strdup( (const char *) q);
-            data.psk_identity_len = (uint16_t) strlen( (const char *) data.psk_identity);
+            psk_identity = q;
             opt++;
             continue;
         }
@@ -1453,6 +1327,8 @@ int main(int argc, char *argv[])
 
     }
 
+    /* Initialize Crypto */
+
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
     status = psa_crypto_init();
     if( status != PSA_SUCCESS )
@@ -1463,66 +1339,61 @@ int main(int argc, char *argv[])
     }
 #endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
 
+
+#if defined(MBEDTLS_DEBUG_C)
+    mbedtls_debug_set_threshold( options.debug_level );
+#endif /* MBEDTLS_DEBUG_C */
+
     if (!server)
     {
         server = (AF_INET == data.addressFamily ? DEFAULT_SERVER_IPV4 : DEFAULT_SERVER_IPV6);
     }
 
-#ifndef WITH_MBEDTLS
-    /*
-     *This call an internal function that create an IPV6 socket on the port 5683.
-     */
-    fprintf(stderr, "Trying to bind LwM2M Client to port %s\r\n", localPort);
+    /* Create a socket */
+    fprintf(stderr, "Creating a socket \r\n");
+
+#if defined LWM2M_CLIENT_MODE 
+    data.sock = socket(data.addressFamily, SOCK_DGRAM, 0);
+#else 
     data.sock = create_socket(localPort, data.addressFamily);
+#endif /* LWM2M_CLIENT_MODE */
     if (data.sock < 0)
     {
         fprintf(stderr, "Failed to open socket: %d %s\r\n", errno, strerror(errno));
         return -1;
     }
-#endif
 
     /*
-     * Now the main function fill an array with each object, this list will be later passed to liblwm2m.
-     * Those functions are located in their respective object file.
+     * The PSK and the CID parameters are hex-encoded and need to be converted first.
+     * The certificates and private keys need to be loaded from file.
      */
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
-    if (options.psk != NULL)
+    if (psk != NULL)
     {
-        data.psk_len = strlen(options.psk) / 2;
-        data.psk = malloc(data.psk_len);
+        options.psk_len = strlen((const char *) psk) / 2;
 
-        if (NULL == data.psk)
+        options.psk = malloc(options.psk_len);
+        if (options.psk == NULL)
         {
             fprintf(stderr, "Failed to allocate buffer for PSK\r\n");
             return -1;
         }
-        // Hex string to binary
-        char *h = options.psk;
-        char *b = (char*) data.psk;
-        char xlate[] = "0123456789ABCDEF";
 
-        for ( ; *h; h += 2, ++b)
+        if( unhexify( data.secContext->psk, options.psk_len,
+                    psk, &options.psk_len ) != 0 )
         {
-            char *l = strchr(xlate, toupper(*h));
-            char *r = strchr(xlate, toupper(*(h+1)));
-
-            if (!r || !l)
-            {
-                fprintf(stderr, "Failed to parse PSK in hex-format\r\n");
-                return -1;
-            }
-
-            *b = ((l - xlate) << 4) + (r - xlate);
+            fprintf(stderr, "PSK not valid\n" );
+            return -1;
         }
     }
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
 
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    if (strlen(options.cid_val) > 0 )
+    if (strlen(cid) > 0 )
     {
-        if( unhexify( data.cid, sizeof( data.cid ),
-                    options.cid_val, &data.cid_len ) != 0 )
+        if( unhexify( options.cid, sizeof( options.cid ),
+                    cid, &options.cid_len ) != 0 )
         {
             fprintf(stderr, "CID not valid\n" );
             return -1;
@@ -1531,21 +1402,13 @@ int main(int argc, char *argv[])
 #endif /* WITH_MBEDTLS && MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
 
-#if defined(MBEDTLS_DEBUG_C)
-    mbedtls_debug_set_threshold( options.debug_level );
-#endif /* MBEDTLS_DEBUG_C */
-
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
-    /* Initialize the RNG and the session data */
-    rng_init( &rng );
-    ret = rng_seed( &rng, 0, name );
-    if( ret != 0 )
+#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+    if (psk_identity != NULL)
     {
-        fprintf(stderr, " failed\n  !  rng_seed returned -0x%x\n\n",
-                   (unsigned int) -ret );
-        return -1;
+        options.psk_identity = (uint8_t*) strdup( (const char *) psk_identity);
+        options.psk_identity_len = (uint16_t) strlen( (const char *) psk_identity);
     }
-#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
+#endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
 #if defined(WITH_TINYDTLS) || defined(WITH_MBEDTLS)
     sprintf (serverUri, "coaps://%s:%s", server, serverPort);
@@ -1557,7 +1420,7 @@ int main(int argc, char *argv[])
 
     /* Determine security mode */
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
-    if (data.psk_identity != NULL && data.psk != NULL)
+    if (options.psk_identity_len > 0 && options.psk_len > 0)
     {
         securityMode = LWM2M_SECURITY_MODE_PRE_SHARED_KEY;
     } else 
@@ -1572,109 +1435,52 @@ int main(int argc, char *argv[])
         securityMode = LWM2M_SECURITY_MODE_NONE;
     }
 
+    /* SNI */
+    //options.sni = (uint8_t*) strdup( (const char *) sni);
 
-#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
-    if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
+    /* Load Client public key */
+    ret = load_pem_file(options.crt_file, (unsigned char**) &options.clicert, &options.clicert_len);
+    if (ret < 0)
     {
-
-        objArray[0] = get_security_object(serverId, serverUri, 
-                                        LWM2M_SECURITY_MODE_PRE_SHARED_KEY,
-                                        bootstrapRequested);
-    } else 
-#endif /* WITH_TINYDTLS || (WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) */
-
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
-    if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE)
-    {
-        mbedtls_x509_crt_init( &cacert );
-        mbedtls_x509_crt_init( &clicert );
-        mbedtls_pk_init( &pkey );
-
-#if defined(MBEDTLS_FS_IO)
-        if( strlen( options.ca_file ) )
-            ret = mbedtls_x509_crt_parse_file( &cacert, options.ca_file );
-        else
-#endif /* MBEDTLS_FS_IO */
-        {
-            for(int i = 0; mbedtls_test_cas_der[i] != NULL; i++ )
-            {
-                ret = mbedtls_x509_crt_parse_der( &cacert,
-                            (const unsigned char *) mbedtls_test_cas_der[i],
-                            mbedtls_test_cas_der_len[i] );
-                if( ret != 0 )
-                    break;
-            }
-        }
-        if( ret < 0 )
-        {
-            fprintf(stderr, " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
-                            (unsigned int) -ret );
-            return -1;
-        }
-
-#if defined(MBEDTLS_FS_IO)
-        if( strlen( options.crt_file ) )
-            ret = mbedtls_x509_crt_parse_file( &clicert, options.crt_file );
-        else
-#endif /* MBEDTLS_FS_IO */
-            ret = mbedtls_x509_crt_parse( &clicert,
-                    (const unsigned char *) mbedtls_test_cli_crt_ec_der,
-                    mbedtls_test_cli_crt_ec_der_len );
-
-        if( ret != 0 )
-        {
-            fprintf(stderr, " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n",
-                            (unsigned int) -ret );
-            return -1;
-        }
-
-#if defined(MBEDTLS_FS_IO)
-        if( strlen( options.key_file ) )
-            ret = mbedtls_pk_parse_keyfile( &pkey, options.key_file, NULL, rng_get, &rng );
-        else
-#endif /* MBEDTLS_FS_IO */
-            ret = mbedtls_pk_parse_key( &pkey,
-                    (const unsigned char *) mbedtls_test_cli_key_ec_der,
-                    mbedtls_test_cli_key_ec_der_len, NULL, 0, rng_get, &rng );
-
-        if( ret != 0 )
-        {
-            fprintf(stderr, " failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n",
-                            (unsigned int) -ret );
-            return -1;
-        }
-
-        // Store credentials as part of the client data
-        data.pkey = &pkey;
-        data.cacert = &cacert;
-        data.clicert = &clicert;
-        
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( options.key_opaque != 0 )
-    {
-        data.key_slot = 0;
-
-        if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &data.key_slot,
-                                               PSA_ALG_ANY_HASH ) ) != 0 )
-        {
-            fprintf(stderr, " failed\n  !  "
-                            "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
-            return -1;
-        }
+        fprintf(stderr, "Unable to load %s\n", options.crt_file);
+        return -1;
     }
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-        // Security relevant data is not stored in the Security Object 
-        objArray[0] = get_security_object(serverId, serverUri, 
-                                        LWM2M_SECURITY_MODE_CERTIFICATE, 
-                                        bootstrapRequested);
+    /* Load Client secret key */
+    ret = load_pem_file(options.key_file, (unsigned char**) &options.pkey, &options.pkey_len);
+    if (ret < 0)
+    {
+        fprintf(stderr, "Unable to load %s\n", options.key_file);
+        return -1;
+    }
+
+    /* Load Server public key = CA cert */
+    ret = load_pem_file(options.ca_file, (unsigned char**) &options.cacert, &options.cacert_len);
+    if (ret < 0)
+    {
+        fprintf(stderr, "Unable to load %s\n", options.ca_file);
+        return -1;
+    }
+
+    data.secContext = &options;
+
+    if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE || securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
+    {
+        /* Create LwM2M Security Object */
+        objArray[0] = get_security_object(serverId, 
+                                          serverUri, 
+                                          &options,
+                                          bootstrapRequested, 
+                                          securityMode);
+
     } else
-#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
     if (securityMode == LWM2M_SECURITY_MODE_NONE)
     {
-        objArray[0] = get_security_object(serverId, serverUri, 
-                                        LWM2M_SECURITY_MODE_NONE, 
-                                        false);
+        objArray[0] = get_security_object(serverId, 
+                                          serverUri,
+                                          NULL,
+                                          false,
+                                          LWM2M_SECURITY_MODE_NONE);
     } else
     {
         fprintf(stderr, "Unsupported security mode\r\n");
@@ -1770,6 +1576,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     data.ctx = lwm2mH;
+    data.connLayer = connectionlayer_create(lwm2mH);
 
     /*
      * We configure the liblwm2m library with the name of the client - which shall be unique for each client -
@@ -1834,17 +1641,7 @@ int main(int argc, char *argv[])
         tv.tv_usec = 0;
 
         FD_ZERO(&readfds);
-#ifndef WITH_MBEDTLS
         FD_SET(data.sock, &readfds);
-#else
-        int sockSize = 0;
-        int * socks = mbedtls_get_sockets(lwm2mH, &sockSize);
-        if(socks != NULL) {
-            for(int i = 0; i < sockSize; i++) {
-                FD_SET(socks[i], &readfds);
-            }
-        }
-#endif
         FD_SET(STDIN_FILENO, &readfds);
 
         /*
@@ -1887,18 +1684,21 @@ int main(int argc, char *argv[])
             {
 #ifdef LWM2M_WITH_LOGS
                 fprintf(stdout, "[BOOTSTRAP] restore security and server objects\r\n");
-#endif
+#endif /* LWM2M_WITH_LOGS */
                 prv_restore_objects(lwm2mH);
                 lwm2mH->state = STATE_INITIAL;
             }
             else return -1;
 #else
         return -1;
-#endif
+#endif /* LWM2M_BOOTSTRAP */
         }
+
 #ifdef LWM2M_BOOTSTRAP
         update_bootstrap_info(&previousState, lwm2mH);
-#endif
+#endif /* LWM2M_BOOTSTRAP */
+
+
         /*
          * This part will set up an interruption until an event happen on SDTIN or the socket until "tv" timed out (set
          * with the precedent function)
@@ -1912,12 +1712,11 @@ int main(int argc, char *argv[])
               fprintf(stderr, "Error in select(): %d %s\r\n", errno, strerror(errno));
             }
         }
-
         else if (result > 0)
         {
             uint8_t buffer[MAX_PACKET_SIZE];
-            int numBytes;
-#ifndef WITH_MBEDTLS
+            ssize_t numBytes;
+
             /*
              * If an event happens on the socket
              */
@@ -1940,21 +1739,15 @@ int main(int argc, char *argv[])
                 else if (numBytes >= MAX_PACKET_SIZE) 
                 {
                     fprintf(stderr, "Received packet >= MAX_PACKET_SIZE\r\n");
-                } 
+                }
                 else if (0 < numBytes)
                 {
                     char s[INET6_ADDRSTRLEN];
                     in_port_t port;
-
-#ifdef WITH_TINYDTLS
-                    dtls_connection_t * connP;
-#else
-                    connection_t * connP;
-#endif
-                    if (AF_INET == addr.ss_family)
-                    {
+                    connection_t *connP;
+                    if (AF_INET == addr.ss_family) {
                         struct sockaddr_in *saddr = (struct sockaddr_in *)&addr;
-                        inet_ntop(saddr->sin_family, &saddr->sin_addr, s, INET6_ADDRSTRLEN);
+                        inet_ntop(saddr->sin_family, &saddr->sin_addr, s, INET_ADDRSTRLEN);
                         port = saddr->sin_port;
                     }
                     else if (AF_INET6 == addr.ss_family)
@@ -1963,28 +1756,20 @@ int main(int argc, char *argv[])
                         inet_ntop(saddr->sin6_family, &saddr->sin6_addr, s, INET6_ADDRSTRLEN);
                         port = saddr->sin6_port;
                     }
-                    fprintf(stderr, "%d bytes received from [%s]:%hu\r\n", numBytes, s, ntohs(port));
+                    fprintf(stderr, "%zd bytes received from [%s]:%hu\r\n", numBytes, s, ntohs(port));
 
                     /*
                      * Display it in the STDERR
                      */
-                    output_buffer(stderr, buffer, numBytes, 0);
+                    output_buffer(stderr, buffer, (size_t)numBytes, 0);
 
-                    connP = connection_find(data.connList, &addr, addrLen);
+                    connP = connectionlayer_find_connection(data.connLayer, &addr, addrLen);
                     if (connP != NULL)
                     {
                         /*
                          * Let liblwm2m respond to the query depending on the context
                          */
-#ifdef WITH_TINYDTLS
-                        int result = connection_handle_packet(connP, buffer, numBytes);
-                        if (0 != result)
-                        {
-                             printf("error handling message %d\n",result);
-                        }
-#else
-                        lwm2m_handle_packet(lwm2mH, buffer, numBytes, connP);
-#endif
+                        connectionlayer_handle_packet(data.connLayer, &addr, addrLen, buffer, numBytes);
                         conn_s_updateRxStatistic(objArray[7], numBytes, false);
                     }
                     else
@@ -1998,19 +1783,6 @@ int main(int argc, char *argv[])
              * If the event happened on the SDTIN
              */
             else if (FD_ISSET(STDIN_FILENO, &readfds))
-            #else
-            for(int i = 0; i < sockSize; i++) {
-                if(FD_ISSET(socks[i], &readfds)) {
-                    void * connection = NULL;
-                    numBytes = mbedtls_receive(lwm2mH, socks[i], buffer, MAX_PACKET_SIZE, &connection);
-                    if(numBytes > 0) {
-                        lwm2m_handle_packet(lwm2mH, buffer, numBytes, connection);
-                    }
-                }
-                lwm2m_free(socks);
-            }
-            if (FD_ISSET(STDIN_FILENO, &readfds))
-            #endif
             {
                 numBytes = read(STDIN_FILENO, buffer, MAX_PACKET_SIZE - 1);
 
@@ -2041,8 +1813,8 @@ int main(int argc, char *argv[])
     if (g_quit == 1)
     {
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
-        free(data.psk_identity);
-        free(data.psk);
+        free(data.secContext->psk_identity);
+        free(data.secContext->psk);
 #endif
 
 #ifdef LWM2M_BOOTSTRAP
@@ -2050,21 +1822,23 @@ int main(int argc, char *argv[])
 #endif
         lwm2m_close(lwm2mH);
     }
-#ifndef WITH_MBEDTLS
+
     close(data.sock);
-    connection_free(data.connList);
-#endif
+    connectionlayer_free(data.connLayer);
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+//    mbedtls_x509_crt_free( data.secContext->clicert );
+//    mbedtls_x509_crt_free( data.secContext->cacert );
+//    mbedtls_pk_free( data.secContext->pkey );
+    lwm2m_free( options.clicert );
+    lwm2m_free( options.cacert );
+    lwm2m_free( options.pkey );
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(WITH_MBEDTLS)
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    mbedtls_x509_crt_free( data.clicert );
-    mbedtls_x509_crt_free( data.cacert );
-    mbedtls_pk_free( data.pkey );
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
-
-#endif /* WITH_MBEDTLS */
+#if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || defined(WITH_TINYDTLS)
+    lwm2m_free( options.psk );
+    lwm2m_free( options.psk_identity );
+#endif /* MBEDTLS_KEY_EXCHANGE_PSK_ENABLED || WITH_TINYDTLS */
 
     clean_security_object(objArray[0]);
     lwm2m_free(objArray[0]);
@@ -2081,9 +1855,13 @@ int main(int argc, char *argv[])
 
 
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_destroy_key( data.key_slot );
+    psa_destroy_key( data.secContext->key_slot );
     mbedtls_psa_crypto_free( );
 #endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO */
+
+#if defined(WITH_MBEDTLS) || defined(WITH_TINYDTLS)
+    lwm2m_free(data.secContext);
+#endif /* WITH_MBEDTLS || WITH_TINYDTLS */
 
 #ifdef MEMORY_TRACE
     if (g_quit == 1)

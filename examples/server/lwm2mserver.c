@@ -1046,7 +1046,7 @@ int main(int argc, char *argv[])
     struct timeval tv;
     int result;
     lwm2m_context_t * lwm2mH = NULL;
-    connection_t * connList = NULL;
+    lwm2m_connection_layer_t *connLayer = NULL;
     int addressFamily = AF_INET6;
     int opt;
     const char * localPort = LWM2M_STANDARD_PORT_STR;
@@ -1175,6 +1175,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    connLayer = connectionlayer_create(lwm2mH);
+
     signal(SIGINT, handle_sigint);
 
     fprintf(stdout, "> "); fflush(stdout);
@@ -1250,19 +1252,11 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "%d bytes received from [%s]:%hu\r\n", numBytes, s, ntohs(port));
                     output_buffer(stderr, buffer, numBytes, 0);
 
-                    connP = connection_find(connList, &addr, addrLen);
-                    if (connP == NULL)
-                    {
-                        connP = connection_new_incoming(connList, sock, (struct sockaddr *)&addr, addrLen);
-                        if (connP != NULL)
-                        {
-                            connList = connP;
-                        }
+                    connP = connectionlayer_find_connection(connLayer, &addr, addrLen);
+                    if (connP == NULL) {
+                        connection_new_incoming(connLayer, sock, &addr, addrLen);
                     }
-                    if (connP != NULL)
-                    {
-                        lwm2m_handle_packet(lwm2mH, buffer, numBytes, connP);
-                    }
+                    connectionlayer_handle_packet(connLayer, &addr, addrLen, buffer, numBytes);
                 }
             }
             else if (FD_ISSET(STDIN_FILENO, &readfds))
@@ -1290,8 +1284,8 @@ int main(int argc, char *argv[])
 
     lwm2m_close(lwm2mH);
     close(sock);
-    connection_free(connList);
-
+     connectionlayer_free(connLayer);
+     
 #ifdef MEMORY_TRACE
     if (g_quit == 1)
     {

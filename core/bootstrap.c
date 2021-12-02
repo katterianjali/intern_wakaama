@@ -55,7 +55,7 @@ static void prv_handleBootstrapReply(lwm2m_context_t * contextP,
 
     (void)contextP; /* unused */
 
-    LOG("Entering");
+    LOG("Entering <handleBootstrapReply>");
 
     if (bootstrapServer->status == STATE_BS_INITIATED)
     {
@@ -78,7 +78,7 @@ static void prv_requestBootstrap(lwm2m_context_t * context,
     int query_length = 0;
     int res;
 
-    LOG("Entering");
+    LOG("Entering <requestBootstrap>");
 
     query_length = utils_stringCopy(query, PRV_QUERY_BUFFER_LENGTH, QUERY_STARTER QUERY_NAME);
     if (query_length < 0)
@@ -121,6 +121,7 @@ static void prv_requestBootstrap(lwm2m_context_t * context,
     query_length += res;
 #endif
 #endif
+    LOG_ARG("query: %s",query);
 
     if (bootstrapServer->sessionH == NULL)
     {
@@ -173,6 +174,8 @@ static uint8_t prv_handleBootstrapDiscover(lwm2m_context_t * contextP,
     int size;
     lwm2m_data_t *dataP;
     uint64_t val;
+
+    LOG("Entering <handleBootstrapDiscover>");
 
     if (uriP && LWM2M_URI_IS_SET_OBJECT(uriP))
     {
@@ -514,7 +517,7 @@ void bootstrap_step(lwm2m_context_t * contextP,
 {
     lwm2m_server_t * targetP;
 
-    LOG("entering");
+    LOG("Entering <bootstrap_step>");
     targetP = contextP->bootstrapServerList;
     while (targetP != NULL)
     {
@@ -590,7 +593,7 @@ uint8_t bootstrap_handleFinish(lwm2m_context_t * context,
 {
     lwm2m_server_t * bootstrapServer;
 
-    LOG("Entering");
+    LOG("Entering <bootstrap_handleFinish>");
     bootstrapServer = utils_findBootstrapServer(context, fromSessionH);
     if (bootstrapServer != NULL
      && bootstrapServer->status == STATE_BS_PENDING)
@@ -620,7 +623,7 @@ void bootstrap_start(lwm2m_context_t * contextP)
 {
     lwm2m_server_t * targetP;
 
-    LOG("Entering");
+    LOG("Entering <bootstrap_start>");
     targetP = contextP->bootstrapServerList;
     while (targetP != NULL)
     {
@@ -643,7 +646,7 @@ lwm2m_status_t bootstrap_getStatus(lwm2m_context_t * contextP)
     lwm2m_server_t * targetP;
     lwm2m_status_t bs_status;
 
-    LOG("Entering");
+    LOG("Entering <bootstrap_getStatus>");
     targetP = contextP->bootstrapServerList;
     bs_status = STATE_BS_FAILED;
 
@@ -977,7 +980,7 @@ uint8_t bootstrap_handleDeleteAll(lwm2m_context_t * contextP,
     uint8_t result;
     lwm2m_object_t * objectP;
 
-    LOG("Entering");
+    LOG("Entering <bootstrap_handleDeleteAll>");
     serverP = utils_findBootstrapServer(contextP, fromSessionH);
     if (serverP == NULL) return COAP_IGNORE;
     result = prv_checkServerStatus(serverP);
@@ -1113,7 +1116,7 @@ void lwm2m_set_bootstrap_callback(lwm2m_context_t * contextP,
                                   lwm2m_bootstrap_callback_t callback,
                                   void * userData)
 {
-    LOG("Entering");
+    LOG("Entering <lwm2m_set_bootstrap_callback>");
     contextP->bootstrapCallback = callback;
     contextP->bootstrapUserData = userData;
 }
@@ -1250,7 +1253,7 @@ int lwm2m_bootstrap_finish(lwm2m_context_t * contextP,
     lwm2m_transaction_t * transaction;
     bs_data_t * dataP;
 
-    LOG("Entering");
+    LOG("Entering <lwm2m_bootstrap_finish>");
     transaction = transaction_new(sessionH, COAP_POST, NULL, NULL, contextP->nextMID++, 4, NULL);
     if (transaction == NULL) return COAP_500_INTERNAL_SERVER_ERROR;
 

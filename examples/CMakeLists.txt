@@ -3,22 +3,10 @@ cmake_minimum_required(VERSION 3.13)
 add_compile_definitions(_POSIX_C_SOURCE=200809)
 add_compile_options(-pedantic)
 
-if(DTLS_MBEDTLS)
-    message("Building Mbed TLS")
-    option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
-    option(ENABLE_TESTING "Build mbed TLS tests." OFF)
-    include_directories(${CMAKE_CURRENT_LIST_DIR}/shared/dtls/mbedtls/include)
-    
-    # Use custom config file for Mbed TLS
-    add_definitions(-DMBEDTLS_CONFIG_FILE="${MBEDTLS_CONFIG_FILE}")
-    
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/shared/dtls/mbedtls)
-
-    include_directories(${CMAKE_CURRENT_LIST_DIR}/client)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/client)
-else()
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/bootstrap_server)
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/client)
+if(NOT DEFINED DTLS_MBEDTLS)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lightclient)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/bootstrap_server)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/server)
 endif()
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/client)

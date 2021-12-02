@@ -59,13 +59,18 @@
 #define MBEDTLS_SSL_DTLS_HELLO_VERIFY
 #define MBEDTLS_SSL_DTLS_ANTI_REPLAY
 #define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
-
 #define MBEDTLS_TIMING_C
+
+/* Enable or disable debug support */
+#define MBEDTLS_DEBUG_C
+#define MBEDTLS_SSL_DEBUG_ALL
+/* Enable error code to error string conversion. */
+#define MBEDTLS_ERROR_C
 
 /* Save RAM at the expense of ROM */
 #define MBEDTLS_AES_ROM_TABLES
 
-/* Save some RAM by adjusting to your exact needs */
+/* Save some RAM by adjusting max. PSK length */
 #define MBEDTLS_PSK_MAX_LEN    16 /* 128-bits keys are generally enough */
 
 /*

@@ -110,7 +110,8 @@ pytest -v tests/integration
 There are some example applications provided to test the server, client and bootstrap capabilities of Wakaama.
 The following recipes assume you are on a unix like platform and you have cmake and make installed.
 
-### Server example
+### Server
+
  * Create a build directory and change to that.
  * ``cmake [wakaama directory]/examples/server``
  * ``make``
@@ -130,14 +131,15 @@ Options:
   -S BYTES	CoAP block size. Options: 16, 32, 64, 128, 256, 512, 1024. Default: 1024
 ```
 
-### Test client example
+### Client
+
  * Create a build directory and change to that.
  * ``cmake [wakaama directory]/examples/client``
  * ``make``
  * ``./lwm2mclient [Options]``
 
-DTLS feature requires the tinydtls submodule. To include it, on the first run,
-use the following commands to retrieve the sources:
+ DTLS feature requires either **tinydtls** or **mbedtls** submodule. To include it, on the first run,
+ use the following commands to retrieve the sources:
  * ``git submodule init``
  * ``git submodule update``
 
@@ -145,9 +147,11 @@ You need to install autoconf and automake to build with tinydtls.
 
 Build with tinydtls:
  * Create a build directory and change to that.
- * ``cmake -DDTLS=1 [wakaama directory]/examples/client``
+ * ``cmake -DDTLS_TINYDTLS=1 [wakaama directory]/examples/client``
  * ``make``
  * ``./lwm2mclient [Options]``
+ 
+ To build with MbedTLS, see description below.
 
 The lwm2mclient features nine LWM2M objects:
  - Security Object (id: 0)
@@ -202,7 +206,7 @@ If DTLS feature enable:
 To launch a bootstrap session:
 ``./lwm2mclient -b``
 
-### Simpler test client example
+### Lightclient
 
 In the any directory, run the following commands:
  * Create a build directory and change to that.
@@ -230,7 +234,8 @@ Options:
   -4		Use IPv4 connection. Default: IPv6 connection
   -S BYTES	CoAP block size. Options: 16, 32, 64, 128, 256, 512, 1024. Default: 1024
 ```
-### Bootstrap Server example
+### Bootstrap Server
+
  * Create a build directory and change to that.
  * ``cmake [wakaama directory]/examples/bootstrap_server``
  * ``make``
@@ -238,7 +243,7 @@ Options:
 
 Refer to [examples/bootstrap_server/README](./examples/bootstrap_server/README) for more information.
 
-### Use of MbedTLS with the LwM2M Client
+### Use of MbedTLS with Wakaama
 
 DISCLAIMER: This code is experimental. Do not use in production system.
 
@@ -284,7 +289,7 @@ In this case, "PolarSSL Test Client 2" is the CN and this will also be your endp
 
 For Leshan, download the code as described at https://github.com/eclipse/leshan. The quickest approach is to download the pre-packaged demo application using the following command:
 
-> wget https://ci.eclipse.org/leshan/job/leshan/lastSuccessfulBuild/artifact/leshan-client-demo.jar
+> wget https://ci.eclipse.org/leshan/job/leshan/lastSuccessfulBuild/artifact/leshan-server-demo.jar
 
 Once downloaded, use the following invocation to run Leshan. 
 
@@ -308,7 +313,7 @@ Next, we need to build and start Wakaama.
 
 To build Wakaama execute the following steps. 
 
-IMPORTANT: Check the content of the examples/CMakeLists.txt file to verify that the configured configuration file points to shared/dtls/config-ccm-ecdsa-dtls1_2.h
+IMPORTANT: Verify that the MBEDTLS_CONFIG_FILE parameter for cmake points to the correct location of the configuration file.
 
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
@@ -350,7 +355,7 @@ PSK-based credentials are easier to use than the certificate-based security mode
 
 For Leshan, download the code as described at https://github.com/eclipse/leshan. The quickest approach is to download the pre-packaged demo application using the following command:
 
-> wget https://ci.eclipse.org/leshan/job/leshan/lastSuccessfulBuild/artifact/leshan-client-demo.jar
+> wget https://ci.eclipse.org/leshan/job/leshan/lastSuccessfulBuild/artifact/leshan-server-demo.jar
 
 Once downloaded, use the following invocation to run Leshan. 
 
@@ -367,6 +372,8 @@ Add a new security entry with
 Switch the tab to http://0.0.0.0:8080/#/clients to see the registered clients. Since we have not started the client yet, the page will be empty.
 
 Next, we need to build Wakaama using the following steps. 
+
+IMPORTANT: Verify that the MBEDTLS_CONFIG_FILE parameter for cmake points to the correct location of the configuration file.
 
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
@@ -410,7 +417,7 @@ Once the build process is finished, use the following invocations. Note that the
 
 Other appropriate ciphersuite settings are TLS-PSK-WITH-AES-128-CCM, and TLS-PSK-WITH-AES-256-CCM-8. It is important that Leshan is also configured with the ciphersuite selected by the client.
 
-Next, we use the X.509-based credential and select an appropriate ciphersuite, namelyTLS-ECDHE-ECDSA-WITH-AES-128-CCM
+Next, we use the X.509-based credential and select an appropriate ciphersuite, namely TLS-ECDHE-ECDSA-WITH-AES-128-CCM
 
 ```
 ./examples/client/lwm2mclient -h localhost -n "PolarSSL Test Client 2" -p 5684 -ca_file="../certs/test-ca2.crt" -crt_file="../certs/cli2.crt" -key_file="../certs/cli2.key" -force_ciphersuite=TLS-ECDHE-ECDSA-WITH-AES-128-CCM

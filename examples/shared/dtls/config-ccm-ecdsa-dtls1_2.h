@@ -51,9 +51,12 @@
  * by default. */
 #define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
+#define MBEDTLS_SHA384_C
+#define MBEDTLS_SHA512_C
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_TLS_C
 
+#define MBEDTLS_SSL_SERVER_NAME_INDICATION
 /* DTLS-specific settings */
 #define MBEDTLS_SSL_DTLS_HELLO_VERIFY
 #define MBEDTLS_SSL_DTLS_ANTI_REPLAY
@@ -96,6 +99,11 @@
 /* Significant speed benefit at the expense of some ROM */
 #define MBEDTLS_ECP_NIST_OPTIM
 
+/* Enable or disable debug support */
+#define MBEDTLS_DEBUG_C
+#define MBEDTLS_SSL_DEBUG_ALL
+/* Enable error code to error string conversion. */
+#define MBEDTLS_ERROR_C
 
 /* Save RAM at the expense of ROM */
 #define MBEDTLS_AES_ROM_TABLES

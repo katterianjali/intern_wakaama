@@ -996,6 +996,8 @@ static uint8_t prv_server_create(lwm2m_context_t *contextP,
     server_instance_t * serverInstance;
     uint8_t result;
 
+    if (objectP == NULL) return COAP_500_INTERNAL_SERVER_ERROR;
+
     serverInstance = (server_instance_t *)lwm2m_malloc(sizeof(server_instance_t));
     if (NULL == serverInstance) return COAP_500_INTERNAL_SERVER_ERROR;
     memset(serverInstance, 0, sizeof(server_instance_t));

@@ -62,7 +62,7 @@ lwm2m_context_t * lwm2m_init(void * userData)
 {
     lwm2m_context_t * contextP;
 
-    LOG("Entering");
+    LOG("Entering <lwm2m_init>");
     contextP = (lwm2m_context_t *)lwm2m_malloc(sizeof(lwm2m_context_t));
     if (NULL != contextP)
     {
@@ -80,7 +80,7 @@ void lwm2m_deregister(lwm2m_context_t * context)
 {
     lwm2m_server_t * server = context->serverList;
 
-    LOG("Entering");
+    LOG("Entering <lwm2m_deregister>");
     while (NULL != server)
     {
         registration_deregister(context, server);
@@ -90,6 +90,8 @@ void lwm2m_deregister(lwm2m_context_t * context)
 
 static void prv_deleteServer(lwm2m_server_t * serverP, void *userData)
 {
+    LOG("Entering <deleteServer>");
+
     // TODO parse transaction and observation to remove the ones related to this server
     if (serverP->sessionH != NULL)
     {
@@ -113,6 +115,8 @@ static void prv_deleteServer(lwm2m_server_t * serverP, void *userData)
 
 static void prv_deleteServerList(lwm2m_context_t * context)
 {
+    LOG("Entering <deleteServerList>");
+
     while (NULL != context->serverList)
     {
         lwm2m_server_t * server;
@@ -124,6 +128,8 @@ static void prv_deleteServerList(lwm2m_context_t * context)
 
 static void prv_deleteBootstrapServer(lwm2m_server_t * serverP, void *userData)
 {
+    LOG("Entering <deleteBootstrapServer>");
+
     // TODO should we free location as in prv_deleteServer ?
     // TODO should we parse transaction and observation to remove the ones related to this server ?
     if (serverP->sessionH != NULL)
@@ -135,6 +141,8 @@ static void prv_deleteBootstrapServer(lwm2m_server_t * serverP, void *userData)
 
 static void prv_deleteBootstrapServerList(lwm2m_context_t * context)
 {
+    LOG("Entering <deleteBootstrapServerList>");
+
     while (NULL != context->bootstrapServerList)
     {
         lwm2m_server_t * server;
@@ -146,6 +154,8 @@ static void prv_deleteBootstrapServerList(lwm2m_context_t * context)
 
 static void prv_deleteObservedList(lwm2m_context_t * contextP)
 {
+    LOG("Entering <deleteObservedList>");
+
     while (NULL != contextP->observedList)
     {
         lwm2m_observed_t * targetP;
@@ -167,6 +177,8 @@ static void prv_deleteObservedList(lwm2m_context_t * contextP)
 
 void prv_deleteTransactionList(lwm2m_context_t * context)
 {
+    LOG("Entering <deleteTransactionList>");
+
     while (NULL != context->transactionList)
     {
         lwm2m_transaction_t * transaction;
@@ -181,7 +193,7 @@ void lwm2m_close(lwm2m_context_t * contextP)
 {
 #ifdef LWM2M_CLIENT_MODE
 
-    LOG("Entering");
+    LOG("Entering <lwm2m_close>");
     lwm2m_deregister(contextP);
     prv_deleteServerList(contextP);
     prv_deleteBootstrapServerList(contextP);
@@ -219,6 +231,8 @@ static int prv_refreshServerList(lwm2m_context_t * contextP)
 {
     lwm2m_server_t * targetP;
     lwm2m_server_t * nextP;
+
+    LOG("Entering <refreshServerList>");
 
     // Remove all servers marked as dirty
     targetP = contextP->bootstrapServerList;
@@ -268,6 +282,8 @@ int lwm2m_configure(lwm2m_context_t * contextP,
 {
     int i;
     uint8_t found;
+ 
+    LOG("Entering <lwm2m_configure>");
 
     LOG_ARG("endpointName: \"%s\", msisdn: \"%s\", altPath: \"%s\", numObject: %d",
             STR_NULL2EMPTY(endpointName),
@@ -337,6 +353,8 @@ int lwm2m_add_object(lwm2m_context_t * contextP,
 {
     lwm2m_object_t * targetP;
 
+    LOG("Entering <lwm2m_add_object>");
+
     LOG_ARG("ID: %d", objectP->objID);
     targetP = (lwm2m_object_t *)LWM2M_LIST_FIND(contextP->objectList, objectP->objID);
     if (targetP != NULL) return COAP_406_NOT_ACCEPTABLE;
@@ -356,6 +374,8 @@ int lwm2m_remove_object(lwm2m_context_t * contextP,
                         uint16_t id)
 {
     lwm2m_object_t * targetP;
+
+    LOG("Entering <lwm2m_remove_object>");
 
     LOG_ARG("ID: %d", id);
     contextP->objectList = (lwm2m_object_t *)LWM2M_LIST_RM(contextP->objectList, id, &targetP);
@@ -377,6 +397,7 @@ int lwm2m_step(lwm2m_context_t * contextP,
                time_t * timeoutP)
 {
     time_t tv_sec;
+    LOG("Entering <lwm2m_step>");
 
     LOG_ARG("timeoutP: %d", (int) *timeoutP);
     tv_sec = lwm2m_gettime();

@@ -52,14 +52,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "sec_context.h"
 
 typedef struct _security_instance_
 {
     struct _security_instance_ * next;        // matches lwm2m_list_t::next
     uint16_t                     instanceId;  // matches lwm2m_list_t::id
     char *                       uri;
-    bool                         isBootstrap;    
+    bool                         isBootstrap;
     uint8_t                      securityMode;
+    char *                       publicIdentity;
+    uint16_t                     publicIdLen;
+    char *                       serverPublicKey;
+    uint16_t                     serverPublicKeyLen;
+    char *                       secretKey;
+    uint16_t                     secretKeyLen;    
     uint8_t                      smsSecurityMode;
     char *                       smsParams; // SMS binding key parameters
     uint16_t                     smsParamsLen;
@@ -85,6 +92,18 @@ static uint8_t prv_get_value(lwm2m_data_t * dataP,
 
     case LWM2M_SECURITY_SECURITY_MODE_ID:
         lwm2m_data_encode_int(targetP->securityMode, dataP);
+        return COAP_205_CONTENT;
+
+    case LWM2M_SECURITY_PUBLIC_KEY_ID:
+        lwm2m_data_encode_opaque((uint8_t*)targetP->publicIdentity, targetP->publicIdLen, dataP);
+        return COAP_205_CONTENT;
+
+    case LWM2M_SECURITY_SERVER_PUBLIC_KEY_ID:
+        lwm2m_data_encode_opaque((uint8_t*)targetP->serverPublicKey, targetP->serverPublicKeyLen, dataP);
+        return COAP_205_CONTENT;
+
+    case LWM2M_SECURITY_SECRET_KEY_ID:
+        lwm2m_data_encode_opaque((uint8_t*)targetP->secretKey, targetP->secretKeyLen, dataP);
         return COAP_205_CONTENT;
 
     case LWM2M_SECURITY_SMS_SECURITY_ID:
@@ -518,14 +537,13 @@ void clean_security_object(lwm2m_object_t * objectP)
         }
         lwm2m_free(securityInstance);
     }
-
-    /* TBD: Free resources allocated for credentials */
 }
 
 lwm2m_object_t * get_security_object(int serverId,
-                                     const char* serverUri,
-                                     uint8_t securityMode,
-                                     bool isBootstrap)                         
+                                     const char *serverUri,
+                                     sec_context_t *context,
+                                     bool isBootstrap,
+                                     uint8_t securityMode)
 {
     lwm2m_object_t * securityObj;
 
@@ -547,28 +565,116 @@ lwm2m_object_t * get_security_object(int serverId,
             return NULL;
         }
 
-        // Set Server URL
         memset(targetP, 0, sizeof(security_instance_t));
         targetP->instanceId = 0;
         targetP->uri = (char*)lwm2m_malloc(strlen(serverUri)+1); 
-        if (NULL == targetP->uri)
-        {
-            lwm2m_free(securityObj);
-            return NULL;
-        }
-
         strcpy(targetP->uri, serverUri);
 
         // Set the security mode
         targetP->securityMode = securityMode;
 
-        // Set Bootstrap
+        // Initialize security context
+        targetP->publicIdentity = NULL;
+        targetP->publicIdLen = 0;
+        targetP->secretKey = NULL;
+        targetP->secretKeyLen = 0;
+        targetP->serverPublicKey = NULL;
+        targetP->serverPublicKeyLen = 0;
+        
+#if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
+        if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
+        {
+            if (context->psk_identity == NULL || context->psk == NULL)
+            {
+                return NULL;
+            }
+
+            // Copy PSK Identity
+            targetP->publicIdentity = strdup(context->psk_identity);
+            targetP->publicIdLen = context->psk_identity_len;
+            
+            // Copy PSK
+            if (context->psk_len > 0)
+            {
+                targetP->secretKey = (char*)lwm2m_malloc(context->psk_len);
+                if (targetP->secretKey == NULL)
+                {
+                    clean_security_object(securityObj);
+                    return NULL;
+                }
+                memcpy(targetP->secretKey, context->psk, context->psk_len);
+                targetP->secretKeyLen = context->psk_len;
+            } else
+            {
+                clean_security_object(securityObj);
+                return NULL;
+            }            
+        }
+#endif /* WITH_TINYDTLS || (WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) */
+
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+        if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE)
+        {
+            if (context->pkey == NULL || context->clicert == NULL || context->cacert == NULL)
+            {
+                return NULL;
+            }
+
+            // Copy client private key
+            if (context->pkey_len > 0)
+            {
+                targetP->secretKey = (char*)lwm2m_malloc(context->pkey_len);
+                if (targetP->secretKey == NULL)
+                {
+                    clean_security_object(securityObj);
+                    return NULL;
+                }
+                memcpy(targetP->secretKey, context->pkey, context->pkey_len);
+                targetP->secretKeyLen = context->pkey_len;
+            } else 
+            {
+                clean_security_object(securityObj);
+                return NULL;
+            }            
+ 
+            // Copy client public key
+            if (context->clicert_len > 0)
+            {
+                targetP->publicIdentity= (char*)lwm2m_malloc(context->clicert_len);
+                if (targetP->publicIdentity == NULL)
+                {
+                    clean_security_object(securityObj);
+                    return NULL;
+                }
+                memcpy(targetP->publicIdentity, context->clicert, context->clicert_len);
+                targetP->publicIdLen = context->clicert_len;
+            } else
+            {
+                clean_security_object(securityObj);
+                return NULL;
+            }
+
+            // Copy CA cert
+            if (context->cacert_len > 0)
+            {
+                targetP->serverPublicKey= (char*)lwm2m_malloc(context->cacert_len);
+                if (targetP->serverPublicKey == NULL)
+                {
+                    clean_security_object(securityObj);
+                    return NULL;
+                }
+                memcpy(targetP->serverPublicKey, context->cacert, context->cacert_len);
+                targetP->serverPublicKeyLen = context->cacert_len;
+            } else 
+            {
+                clean_security_object(securityObj);
+                return NULL;
+            }
+        }
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
+
         targetP->isBootstrap = isBootstrap;
-
-        // Set Short Server Id
         targetP->shortID = serverId;
-
-        // Set Client Holdoff Time
         targetP->clientHoldOffTime = 10;
 
         securityObj->instanceList = LWM2M_LIST_ADD(securityObj->instanceList, targetP);
@@ -578,7 +684,7 @@ lwm2m_object_t * get_security_object(int serverId,
         securityObj->writeFunc = prv_security_write;
         securityObj->createFunc = prv_security_create;
         securityObj->deleteFunc = prv_security_delete;
-#endif
+#endif /* LWM2M_BOOTSTRAP */
     }
 
     return securityObj;

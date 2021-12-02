@@ -356,7 +356,7 @@ int transaction_send(lwm2m_context_t * contextP,
 {
     bool maxRetriesReached = false;
 
-    LOG_ARG("Entering: transaction=%p", transacP);
+    LOG_ARG("Entering <transaction_send>: transaction=%p", transacP);
     if (transacP->buffer == NULL)
     {
         transacP->buffer_len = coap_serialize_get_size(transacP->message);
@@ -374,6 +374,11 @@ int transaction_send(lwm2m_context_t * contextP,
         }
 
         transacP->buffer_len = coap_serialize_message(transacP->message, transacP->buffer);
+
+        for (size_t i = 0; i < transacP->buffer_len; i++) {
+            printf("0x%02x ", (unsigned char)transacP->buffer+ i);
+        }
+
         if (transacP->buffer_len == 0)
         {
             lwm2m_free(transacP->buffer);
