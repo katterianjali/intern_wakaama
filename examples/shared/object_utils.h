@@ -15,6 +15,7 @@ int security_get_secret_key(lwm2m_context_t *clientCtx, uint16_t securityInstanc
 int security_get_public_key(lwm2m_context_t *clientCtx, uint16_t securityInstanceId, uint8_t **pskId, size_t *len);
 int security_get_server_public_key(lwm2m_context_t *clientCtx, uint16_t securityInstanceId, uint8_t **publicKey, size_t *len);
 int security_get_security_mode(lwm2m_context_t *clientCtx, uint16_t securityInstanceId, int *mode);
+int security_get_sni(lwm2m_context_t *clientCtx, uint16_t securityInstanceId,uint8_t **sni);
 
 #endif /* LWM2M_CLIENT_MODE */
 

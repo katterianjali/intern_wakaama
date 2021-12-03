@@ -100,4 +100,8 @@ int security_get_security_mode(lwm2m_context_t *clientCtx, uint16_t securityInst
     return object_get_int(clientCtx, LWM2M_SECURITY_OBJECT_ID, securityInstanceId, LWM2M_SECURITY_SECURITY_MODE_ID, mode);
 }
 
+int security_get_sni(lwm2m_context_t *clientCtx, uint16_t securityInstanceId, uint8_t **sni) {
+    return object_get_str(clientCtx, LWM2M_SECURITY_OBJECT_ID, securityInstanceId, LWM2M_SECURITY_SNI_ID, sni);
+}
+
 #endif

@@ -191,6 +191,10 @@ connection_t *dtlsconnection_create(lwm2m_connection_layer_t *connLayerP, uint16
     rng_context_t rng;
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    uint8_t *sni = NULL;     /* SNI                                      */
+#endif /* WITH_MBEDTLS && MBEDTLS_SSL_SERVER_NAME_INDICATION */
+
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )    
     uint8_t *identity = NULL;      /* PSK Identity                    */
     size_t identityLen = 0;        /* PSK Identity length             */
@@ -269,7 +273,16 @@ connection_t *dtlsconnection_create(lwm2m_connection_layer_t *connLayerP, uint16
         }
         ret = security_get_server_public_key(connLayerP->ctx, securityInstance, &cacert, &cacert_len);
         if (ret <= 0) {
+            lwm2m_free(clicert);
             lwm2m_free(pkey);
+            return NULL;
+        }
+
+        ret = security_get_sni(connLayerP->ctx, securityInstance, &sni);
+        if (ret <= 0) {
+            lwm2m_free(clicert);
+            lwm2m_free(pkey);
+            lwm2m_free(cacert);
             return NULL;
         }
 
@@ -451,8 +464,7 @@ connection_t *dtlsconnection_create(lwm2m_connection_layer_t *connLayerP, uint16
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     if (securityMode == LWM2M_SECURITY_MODE_CERTIFICATE)
     {
-        // TBD: Might better be SNI
-        if( ( ret = mbedtls_ssl_set_hostname( &dtlsConn->ssl, host ) ) != 0 )
+        if( ( ret = mbedtls_ssl_set_hostname( &dtlsConn->ssl, (const char *) sni ) ) != 0 )
         {
             dtlsconnection_deinit(dtlsConn);
             lwm2m_free(dtlsConn);

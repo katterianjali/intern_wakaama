@@ -953,7 +953,9 @@ void print_usage(void)
     fprintf(stdout, "  -cid=VALUE\tDisable (0) or enable (1) the use of the DTLS Connection ID extension\r\n");
     fprintf(stdout, "  -cid_val=HEXSTRING\tThe CID to use for incoming messages (in hex, without 0x)\r\n");
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
-
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    fprintf(stdout, "  -sni=STRING\t\tDefines the Server Name Indication (SNI)\r\n");
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
     fprintf(stdout, "  -psk_identity=STRING\tPSK identity\r\n");
     fprintf(stdout, "  -psk=HEXSTRING\tPre-Shared Key\r\n");
@@ -998,8 +1000,6 @@ int main(int argc, char *argv[])
     uint8_t securityMode = LWM2M_SECURITY_MODE_NONE;
     char serverUri[50];
     int serverId = 123;
-    char *psk = NULL;
-    char *cid = NULL;
 
     memset(&data, 0, sizeof(client_data_t));
 
@@ -1015,6 +1015,7 @@ int main(int argc, char *argv[])
 #if defined WITH_TINYDTLS || defined WITH_MBEDTLS
     /* PSK-based security mode */
     options.psk = NULL;
+    char *psk = NULL;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
 #if defined WITH_MBEDTLS
@@ -1069,13 +1070,29 @@ int main(int argc, char *argv[])
     data.addressFamily = AF_INET;
 
     /* Setting default values for options */
+#if defined(WITH_MBEDTLS)
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
     options.key_opaque = 0; // do not use opaque keys
+#endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_X509_CRT_PARSE_C */
+#if defined(MBEDTLS_DEBUG_C)
     options.debug_level = 0; // no debugging
+#endif /* MBEDTLS_DEBUG_C */
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)  
     options.cid_enabled = MBEDTLS_SSL_CID_DISABLED;
-    options.ca_file = "";
-    options.crt_file = "";
-    options.key_file = "";
+    char *cid = NULL;
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_FS_IO)
+    options.ca_file = NULL;
+    options.crt_file = NULL;
+    options.key_file = NULL;
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    options.sni = NULL;
+    char *sni = NULL;     
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
     options.force_ciphersuite[0] = 0; // default for ciphersuite
+#endif /* WITH_MBEDTLS */
 
     opt = 1;
     while (opt < argc)
@@ -1211,7 +1228,9 @@ int main(int argc, char *argv[])
             *q++ = '\0';
         }
 
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_FS_IO)
+#if defined(WITH_MBEDTLS) 
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_FS_IO)
         if( strcmp( p, "-ca_file" ) == 0 )
         {
             options.ca_file = q;
@@ -1230,9 +1249,16 @@ int main(int argc, char *argv[])
             opt++;
             continue;
         }        
-#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
-#if defined(WITH_MBEDTLS) 
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+        if( strcmp( p, "-sni" ) == 0 )
+        {
+            sni = q;
+            opt++;
+            continue;
+        }
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
         if( strcmp( p, "-cid" ) == 0 )
         {
@@ -1293,17 +1319,16 @@ int main(int argc, char *argv[])
             opt++;
             continue;
         }
-#endif /* WITH_MBEDTLS */
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(MBEDTLS_USE_PSA_CRYPTO) && defined(MBEDTLS_X509_CRT_PARSE_C)
         if( strcmp( p, "-key_opaque" ) == 0 )
         {
             options.key_opaque = atoi( q );
             opt++;
             continue;
         }
-#endif /* WITH_MBEDTLS && MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_X509_CRT_PARSE_C */
 
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
         if( strcmp( p, "-psk" ) == 0 )
         {
             psk = q;
@@ -1316,7 +1341,8 @@ int main(int argc, char *argv[])
             opt++;
             continue;
         }
-#endif /* WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
+#endif /* WITH_MBEDTLS */
 
         /* No parameter matches */
         if (param_match == 0)
@@ -1386,6 +1412,18 @@ int main(int argc, char *argv[])
     }
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    if (sni != NULL )
+    {
+        options.sni = strdup( (const char *) sni);
+        if (options.sni == NULL)
+        {
+            fprintf(stderr, "Not enough memory for SNI available\n" );
+            return -1;
+        }
+        options.sni_len = (uint8_t) strlen( (const char *) sni);
+    }
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if (strlen(cid) > 0 )
@@ -1404,6 +1442,11 @@ int main(int argc, char *argv[])
     if (psk_identity != NULL)
     {
         options.psk_identity = (uint8_t*) strdup( (const char *) psk_identity);
+        if (options.psk_identity == NULL)
+        {
+            fprintf(stderr, "Not enough memory for PSK Identity available\n" );
+            return -1;
+        }
         options.psk_identity_len = (uint16_t) strlen( (const char *) psk_identity);
     }
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
@@ -1432,9 +1475,6 @@ int main(int argc, char *argv[])
     {   
         securityMode = LWM2M_SECURITY_MODE_NONE;
     }
-
-    /* SNI */
-    //options.sni = (uint8_t*) strdup( (const char *) sni);
 
     /* Load Client public key */
     ret = load_pem_file(options.crt_file, (unsigned char**) &options.clicert, &options.clicert_len);
@@ -1824,11 +1864,19 @@ int main(int argc, char *argv[])
     close(data.sock);
     connectionlayer_free(data.connLayer);
 
-#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(WITH_MBEDTLS)
+
+#if defined(MBEDTLS_X509_CRT_PARSE_C)
     lwm2m_free( options.clicert );
     lwm2m_free( options.cacert );
     lwm2m_free( options.pkey );
-#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+    lwm2m_free(options.sni);
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+ 
+#endif /* WITH_MBEDTLS */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) || defined(WITH_TINYDTLS)
     lwm2m_free( options.psk );

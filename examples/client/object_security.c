@@ -75,6 +75,7 @@ typedef struct _security_instance_
     uint16_t                     shortID;
     uint32_t                     clientHoldOffTime;
     uint32_t                     bootstrapServerAccountTimeout;
+    char *                       sni;
 } security_instance_t;
 
 static uint8_t prv_get_value(lwm2m_data_t * dataP,
@@ -132,6 +133,10 @@ static uint8_t prv_get_value(lwm2m_data_t * dataP,
 
     case LWM2M_SECURITY_BOOTSTRAP_TIMEOUT_ID:
         lwm2m_data_encode_int(targetP->bootstrapServerAccountTimeout, dataP);
+        return COAP_205_CONTENT;
+
+    case LWM2M_SECURITY_SNI_ID:
+        lwm2m_data_encode_string(targetP->sni, dataP);
         return COAP_205_CONTENT;
 
     default:
@@ -419,6 +424,20 @@ static uint8_t prv_security_write(lwm2m_context_t *contextP,
             }
             break;
         }
+        case LWM2M_SECURITY_SNI_ID:
+            if (targetP->sni != NULL) lwm2m_free(targetP->sni);
+            targetP->sni = (char *)lwm2m_malloc(dataArray[i].value.asBuffer.length + 1);
+            memset(targetP->sni, 0, dataArray[i].value.asBuffer.length + 1);
+            if (targetP->sni != NULL)
+            {
+                strncpy(targetP->sni, (char*)dataArray[i].value.asBuffer.buffer, dataArray[i].value.asBuffer.length);
+                result = COAP_204_CHANGED;
+            }
+            else
+            {
+                result = COAP_500_INTERNAL_SERVER_ERROR;
+            }
+            break;
 
         default:
             return COAP_400_BAD_REQUEST;
@@ -444,7 +463,10 @@ static uint8_t prv_security_delete(lwm2m_context_t *contextP,
     {
         lwm2m_free(targetP->uri);
     }
-
+    if (NULL != targetP->sni)
+    {
+        lwm2m_free(targetP->sni);
+    }
     lwm2m_free(targetP);
 
     return COAP_202_DELETED;
@@ -580,6 +602,7 @@ lwm2m_object_t * get_security_object(int serverId,
         targetP->secretKeyLen = 0;
         targetP->serverPublicKey = NULL;
         targetP->serverPublicKeyLen = 0;
+        targetP->sni = NULL;
         
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )
         if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
@@ -670,6 +693,24 @@ lwm2m_object_t * get_security_object(int serverId,
                 clean_security_object(securityObj);
                 return NULL;
             }
+
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+            // Copy SNI
+            if (context->sni_len > 0)
+            {
+                targetP->sni = strdup( context->sni );
+
+                if (targetP->sni == NULL)
+                {
+                    clean_security_object(securityObj);
+                    return NULL;
+                }
+            } else 
+            {
+                clean_security_object(securityObj);
+                return NULL;
+            }
+#endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
         }
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
 

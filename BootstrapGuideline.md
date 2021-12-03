@@ -87,6 +87,8 @@ In this setup we assume that both servers run locally on a Linux-based machine.
 127.0.0.1	bootstrap-server
 ```
 
+If you use the Server Name Extension (SNI) of DTLS/TLS, then this change to the /etc/hosts file is unnecessary. More about the use of the SNI can be found below.
+
 ### Leshan Servers
 
 We need to download and configure the two Leshan servers. The guidelines for downloading and building Leshan can be found at https://github.com/eclipse/leshan
@@ -220,4 +222,78 @@ Finally, invoke the lwm2mclient with the following parameters:
 ```
 
 If you run this command you should see in your LwM2M Server management UI that the LwM2M Client has successfully registered. 
+
+
+### Server Name Indication (SNI)
+
+To use the SNI extension two steps are necessary. 
+
+First, the LwM2M Bootstrap Server needs to be configured to provision the SNI for use with the LwM2M Server to the LwM2M Client during bootstrapping. 
+
+Unfortunately, this configuration option is not available via the simplified web UI. Instead, it is necessary to add the SNI information to the bootstrap server configuration file instead. By default, this configuration file is found in the bootstrap.json file of the data folder where the bootstrap server was started. Alternatively, the location of the configuration file can be specified with a command line parameter. 
+
+Here is an example of the bootstrap.json file (with the detailed information about the certificates and the private key excluded). As it can be seen, the "sni" is included in both instances of the security object.
+
+```
+{
+  "lwm2m-client" : {
+    "autoIdForSecurityObject" : false,
+    "toDelete" : [ "/0", "/1" ],
+    "servers" : {
+      "0" : {
+        "shortId" : 123,
+        "lifetime" : 300,
+        "defaultMinPeriod" : 1,
+        "notifIfDisabled" : true,
+        "binding" : "U"
+      }
+    },
+    "security" : {
+      "0" : {
+        "uri" : "coaps://bootstrap-server:5784",
+        "bootstrapServer" : true,
+        "securityMode" : "X509",
+        "publicKeyOrId" : [ ... ],
+        "serverPublicKey" : [ ... ],
+        "secretKey" : [ ... ],
+        "smsSecurityMode" : "NO_SEC",
+        "smsBindingKeyParam" : [ ],
+        "smsBindingKeySecret" : [ ],
+        "serverSmsNumber" : "",
+        "clientOldOffTime" : 1,
+        "bootstrapServerAccountTimeout" : 0,
+        "sni" : "bootstrap-server"
+        
+      },
+      "1" : {
+        "uri" : "coaps://lwm2m-server:5684",
+        "bootstrapServer" : false,
+        "securityMode" : "X509",
+        "publicKeyOrId" : [ ... ],
+        "serverPublicKey" : [ ... ],
+        "secretKey" : [ ... ],
+        "smsSecurityMode" : "NO_SEC",
+        "smsBindingKeyParam" : [ ],
+        "smsBindingKeySecret" : [ ],
+        "serverSmsNumber" : "",
+        "serverId" : 123,
+        "clientOldOffTime" : 1,
+        "bootstrapServerAccountTimeout" : 0,
+        "sni" : "lwm2m-server"        
+      }
+    },
+    "acls" : { }
+  }
+}
+```
+
+Second, Wakaama needs to be told to use the SNI. When Mbed TLS has been configured to use the SNI (via the MBEDTLS_SSL_SERVER_NAME_INDICATION pre-processor macro) then the command line parameter "-sni" becomes available. For invocation the provided SNI refers to the first LwM2M Bootstrap Server, which is first contacted by Wakaama. 
+
+In our example, the above-used invocation becomes: 
+
+```
+./examples/client/lwm2mclient -h "bootstrap-server" -n "lwm2m-client" -p 5784 -ca_file="../certs/ca.crt" -crt_file="../certs/lwm2m-client.crt" -key_file="../certs/lwm2m-client.key" -debug_level=1 -4 -b -sni="bootstrap-server"
+```
+ The SNI extension [RFC6066] allows the LwM2M Client to tell the LwM2M Bootstrap Server and the LwM2M Server the name of the server it wants to contact. This is a useful extension for hosting environments where multiple virtual servers are run on a single IP address. Of course, the SNI used by Wakaama in the DTLS handshake needs to match the information returned in the certificate from the DTLS server. A failure to do so will result in a 'bad certificate' alert message in DTLS. 
+
 
