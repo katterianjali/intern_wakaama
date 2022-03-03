@@ -265,7 +265,7 @@ The subparagraphs below explain the use of these two credential types in more de
 
 #### X.509-based Credentials
 
-To use certificate-based credentials we have to create certificates and private keys for use by Wakaama and by the LwM2M Server. In this examples we have used Leshan as the LwM2M Server. The certificates and private keys used by this example are assumed to be located in the certs folder, previously created following the guideline in [Bootstrap Guideline](https://github.com/hannestschofenig/wakaama/blob/bugfixes/BootstrapGuideline.md).
+To use certificate-based credentials we have to create certificates and private keys for use by Wakaama and by the LwM2M Server. In this examples we have used Leshan as the LwM2M Server. The certificates and private keys used by this example are assumed to be located in the certs folder, created following the steps in [Bootstrap Guideline](https://github.com/hannestschofenig/wakaama/blob/bugfixes/BootstrapGuideline.md).
 
 The following ECC-based certificates/private keys are used: 
 - Certificate for Wakaama (in certs/cli2.crt)
