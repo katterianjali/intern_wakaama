@@ -318,7 +318,7 @@ IMPORTANT: Verify that the MBEDTLS_CONFIG_FILE parameter for cmake points to the
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
 cd wakaama/
-git checkout bugfix
+git checkout bugfixes
 git submodule update --init --recursive
 mkdir build
 cd build
@@ -382,7 +382,7 @@ git checkout bugfix
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-ccm-psk-tls1_2.h" ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="config-ccm-psk-tls1_2.h" ..
 make
 ```
 
