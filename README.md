@@ -382,7 +382,7 @@ git checkout bugfixes
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="config-ccm-psk-tls1_2.h" ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="examples/shared/dtls/config-ccm-psk-tls1_2.h" ..
 make
 ```
 
