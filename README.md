@@ -378,7 +378,7 @@ IMPORTANT: Verify that the MBEDTLS_CONFIG_FILE parameter for cmake points to the
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
 cd wakaama/
-git checkout bugfix
+git checkout bugfixes
 git submodule update --init --recursive
 mkdir build
 cd build
