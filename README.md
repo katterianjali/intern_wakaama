@@ -406,7 +406,7 @@ If everything works fine, you should be able to see a client being registered at
 Conceptually, the use of the PSA Crypto API is similiar to the approaches described previously. As a major difference, a different config file is used, which configures the code to use different functionality. Below is the change to the cmake invocation to use the provided config file.
 
 ```
-cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-psa.h" ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="config-psa.h" ..
 ```
 
 Once the build process is finished, use the following invocations. Note that the config-psa.h configuration file configures the stack to support both PSK as well as X.509-based credentials. Hence, it is necessary to indicate what TLS ciphersuite to use. This can be done with the -force_ciphersuite parameter. In the first example we use PSK-based authentication with the TLS-PSK-WITH-AES-256-CCM ciphersuite. The parameters -psk_identity and -psk have to be specified.
