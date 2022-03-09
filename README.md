@@ -265,7 +265,7 @@ The subparagraphs below explain the use of these two credential types in more de
 
 #### X.509-based Credentials
 
-To use certificate-based credentials we have to create certificates and private keys for use by Wakaama and by the LwM2M Server. In this examples we have used Leshan as the LwM2M Server. The certificates and private keys used by this example can be found in the certs folder, which are copies of what is used by the MbedTLS test harness.
+To use certificate-based credentials we have to create certificates and private keys for use by Wakaama and by the LwM2M Server. In this examples we have used Leshan as the LwM2M Server. The certificates and private keys used by this example are assumed to be located in the certs folder, created following the steps in [Bootstrap Guideline](https://github.com/hannestschofenig/wakaama/blob/bugfixes/BootstrapGuideline.md).
 
 The following ECC-based certificates/private keys are used: 
 - Certificate for Wakaama (in certs/cli2.crt)
@@ -318,7 +318,7 @@ IMPORTANT: Verify that the MBEDTLS_CONFIG_FILE parameter for cmake points to the
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
 cd wakaama/
-git checkout bugfix
+git checkout bugfixes
 git submodule update --init --recursive
 mkdir build
 cd build
@@ -378,11 +378,11 @@ IMPORTANT: Verify that the MBEDTLS_CONFIG_FILE parameter for cmake points to the
 ```
 git clone https://github.com/hannestschofenig/wakaama.git
 cd wakaama/
-git checkout bugfix
+git checkout bugfixes
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-ccm-psk-tls1_2.h" ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="examples/shared/dtls/config-ccm-psk-tls1_2.h" ..
 make
 ```
 
@@ -406,7 +406,7 @@ If everything works fine, you should be able to see a client being registered at
 Conceptually, the use of the PSA Crypto API is similiar to the approaches described previously. As a major difference, a different config file is used, which configures the code to use different functionality. Below is the change to the cmake invocation to use the provided config file.
 
 ```
-cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="/home/hannes/hannes-wakaama/wakaama/examples/shared/dtls/config-psa.h" ..
+cmake -DDTLS_MBEDTLS=1 -DMBEDTLS_CONFIG_FILE="config-psa.h" ..
 ```
 
 Once the build process is finished, use the following invocations. Note that the config-psa.h configuration file configures the stack to support both PSK as well as X.509-based credentials. Hence, it is necessary to indicate what TLS ciphersuite to use. This can be done with the -force_ciphersuite parameter. In the first example we use PSK-based authentication with the TLS-PSK-WITH-AES-256-CCM ciphersuite. The parameters -psk_identity and -psk have to be specified.
