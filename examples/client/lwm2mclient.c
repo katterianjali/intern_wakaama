@@ -1016,6 +1016,7 @@ int main(int argc, char *argv[])
     /* PSK-based security mode */
     options.psk = NULL;
     char *psk = NULL;
+    char *psk_identity = NULL;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
 #if defined WITH_MBEDTLS
@@ -1476,6 +1477,7 @@ int main(int argc, char *argv[])
         securityMode = LWM2M_SECURITY_MODE_NONE;
     }
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
     /* Load Client public key */
     ret = load_pem_file(options.crt_file, (unsigned char**) &options.clicert, &options.clicert_len);
     if (ret < 0)
@@ -1499,6 +1501,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Unable to load %s\n", options.ca_file);
         return -1;
     }
+#endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
 
     data.secContext = &options;
 

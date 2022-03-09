@@ -61,9 +61,11 @@ typedef struct
 } sec_context_t;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 
+#if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)
 void rng_init( rng_context_t *rng );
 int rng_seed( rng_context_t *rng, int reproducible, const char *pers );
 void rng_free( rng_context_t *rng );
 int rng_get( void *p_rng, unsigned char *output, size_t output_len );
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #endif /* SECCONTEXT_H_ */

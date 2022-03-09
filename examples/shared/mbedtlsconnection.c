@@ -197,7 +197,7 @@ connection_t *dtlsconnection_create(lwm2m_connection_layer_t *connLayerP, uint16
 
 #if defined(WITH_TINYDTLS) || ( defined(WITH_MBEDTLS) && defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) )    
     uint8_t *identity = NULL;      /* PSK Identity                    */
-    size_t identityLen = 0;        /* PSK Identity length             */
+    size_t identityLen = 0;        /* PSK Identity length             */    
     uint8_t *psk = NULL;           /* PSK                             */
     size_t pskLen = 0;             /* PSK length                      */
 #endif /* WITH_TINYDTLS || (WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED) */
@@ -390,8 +390,8 @@ connection_t *dtlsconnection_create(lwm2m_connection_layer_t *connLayerP, uint16
     if (securityMode == LWM2M_SECURITY_MODE_PRE_SHARED_KEY)
     {
         if((ret = mbedtls_ssl_conf_psk( &dtlsConn->conf,
-                                        psk, psk_len,
-                                        psk_identity, psk_identity_len)
+                                        psk, pskLen,
+                                        identity, identityLen)
                                       ) != 0)
         {
             dtlsconnection_deinit(dtlsConn);
