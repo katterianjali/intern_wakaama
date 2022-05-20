@@ -343,16 +343,17 @@ connection_t *dtlsconnection_create(lwm2m_connection_layer_t *connLayerP, uint16
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */
         
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-    if( options.key_opaque != 0 )
+    if( clientData->key_opaque != 0 )
     {
-        data.secContext->key_slot = 0;
+        clientData->key_slot = MBEDTLS_SVC_KEY_ID_INIT;
 
-        if( ( ret = mbedtls_pk_wrap_as_opaque( &pkey, &data.secContext->key_slot,
-                                               PSA_ALG_ANY_HASH ) ) != 0 )
+       if( ( ret = mbedtls_pk_wrap_as_opaque( &clientData->mbedtls_pkey,
+                                              &clientData->key_slot,
+                                              PSA_ALG_ANY_HASH ) ) != 0 )                                               
         {
             fprintf(stderr, " failed\n  !  "
                             "mbedtls_pk_wrap_as_opaque returned -0x%x\n\n", (unsigned int)  -ret );
-            return -1;
+            return NULL;
         }
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */

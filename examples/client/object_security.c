@@ -706,12 +706,6 @@ lwm2m_object_t * get_security_object(int serverId,
                     return NULL;
                 }
             } 
-            /* We may not need to produce an error if the SNI is not provided 
-            else 
-            {
-                clean_security_object(securityObj);
-                return NULL;
-            } */
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
         }
 #endif /* WITH_MBEDTLS && MBEDTLS_X509_CRT_PARSE_C */

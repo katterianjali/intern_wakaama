@@ -37,6 +37,9 @@ typedef struct
     size_t pkey_len;                             /* Client secret key length                 */
 #endif  /* MBEDTLS_X509_CRT_PARSE_C */
     int key_opaque;                              /* handle private key as if it were opaque  */
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_svc_key_id_t key_slot;
+#endif 
     int debug_level;                             /* level of debugging                       */
     int force_ciphersuite[2];                    /* protocol/ciphersuite to use, or all      */
 #if defined(WITH_MBEDTLS) && defined(MBEDTLS_X509_CRT_PARSE_C)

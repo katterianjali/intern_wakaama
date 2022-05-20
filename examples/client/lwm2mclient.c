@@ -1090,7 +1090,8 @@ int main(int argc, char *argv[])
 #endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_FS_IO */
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     options.sni = NULL;
-    char *sni = NULL;     
+    options.sni_len = 0;
+    char *sni = NULL;
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
     options.force_ciphersuite[0] = 0; // default for ciphersuite
 #endif /* WITH_MBEDTLS */
@@ -1453,10 +1454,10 @@ int main(int argc, char *argv[])
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS && MBEDTLS_KEY_EXCHANGE_PSK_ENABLED */
 
 #if defined(WITH_TINYDTLS) || defined(WITH_MBEDTLS)
-    sprintf (serverUri, "coaps://%s:%s", server, serverPort);
+    sprintf(serverUri, "coaps://%s:%s", server, serverPort);
     secure_coap=true;
 #else
-    sprintf (serverUri, "coap://%s:%s", server, serverPort);
+    sprintf(serverUri, "coap://%s:%s", server, serverPort);
     secure_coap=false;
 #endif /* WITH_TINYDTLS || WITH_MBEDTLS */
 

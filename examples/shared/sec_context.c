@@ -44,8 +44,8 @@ int rng_seed( rng_context_t *rng, int reproducible, const char *pers )
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( reproducible )
     {
-        mbedtls_fprintf( stderr,
-                         "MBEDTLS_USE_PSA_CRYPTO does not support reproducible mode.\n" );
+        fprintf( stderr,
+                 "MBEDTLS_USE_PSA_CRYPTO does not support reproducible mode.\n" );
         return( -1 );
     }
 #endif
@@ -55,8 +55,8 @@ int rng_seed( rng_context_t *rng, int reproducible, const char *pers )
     (void) pers;
     if( reproducible )
     {
-        mbedtls_fprintf( stderr,
-                         "The PSA RNG does not support reproducible mode.\n" );
+        fprintf( stderr,
+                 "The PSA RNG does not support reproducible mode.\n" );
         return( -1 );
     }
     return( 0 );
