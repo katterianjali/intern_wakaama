@@ -1744,6 +1744,8 @@
  * Uncomment this to enable internal use of PSA Crypto and new associated APIs.
  */
 #define MBEDTLS_USE_PSA_CRYPTO
+#define PSA_CRYPTO_TS_DRIVER
+#define MBEDTLS_PSA_CRYPTO_DRIVERS
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_CONFIG

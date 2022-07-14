@@ -63,6 +63,10 @@ elseif (DTLS_MBEDTLS)
     target_link_libraries(${PROJECT_NAME}
     PRIVATE
         mbedtls
+    PRIVATE
+        mbedcrypto
+    PRIVATE
+       /home/tuskha01/work/lwm2m/ts_new/deployments/libts/linux-pc/build/libts.so    
     )
 endif()
 
