@@ -56,12 +56,22 @@ void display_location_object(lwm2m_object_t * objectP);
  * object_test.c
  */
 #define TEST_OBJECT_ID 31024
+#define ATTESTATION_OBJECT_ID 31025
+
 lwm2m_object_t * get_test_object(void);
 void free_test_object(lwm2m_object_t * object);
 void display_test_object(lwm2m_object_t * objectP);
+
+lwm2m_object_t * get_attestation_object(void);
+void free_attestation_object(lwm2m_object_t * object);
+void display_attestation_object(lwm2m_object_t * objectP);
+
+
 /*
  * object_server.c
  */
+
+
 lwm2m_object_t * get_server_object(int serverId, const char* binding, int lifetime, bool storing);
 void clean_server_object(lwm2m_object_t * object);
 void display_server_object(lwm2m_object_t * objectP);

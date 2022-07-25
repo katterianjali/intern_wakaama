@@ -106,7 +106,7 @@
 int g_reboot = 0;
 static int g_quit = 0;
 
-#define OBJ_COUNT 9
+#define OBJ_COUNT 10
 lwm2m_object_t * objArray[OBJ_COUNT];
 
 
@@ -1571,23 +1571,30 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    objArray[6] = get_object_conn_m();
+    objArray[6] = get_attestation_object();
     if (NULL == objArray[6])
+    {
+        fprintf(stderr, "Failed to create test object\r\n");
+        return -1;
+    }
+
+    objArray[7] = get_object_conn_m();
+    if (NULL == objArray[7])
     {
         fprintf(stderr, "Failed to create connectivity monitoring object\r\n");
         return -1;
     }
 
-    objArray[7] = get_object_conn_s();
-    if (NULL == objArray[7])
+    objArray[8] = get_object_conn_s();
+    if (NULL == objArray[8])
     {
         fprintf(stderr, "Failed to create connectivity statistics object\r\n");
         return -1;
     }
 
     int instId = 0;
-    objArray[8] = acc_ctrl_create_object();
-    if (NULL == objArray[8])
+    objArray[9] = acc_ctrl_create_object();
+    if (NULL == objArray[9])
     {
         fprintf(stderr, "Failed to create Access Control object\r\n");
         return -1;
