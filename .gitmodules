@@ -3,4 +3,4 @@
 	url = https://github.com/eclipse/tinydtls.git
 [submodule "examples/shared/dtls/mbedtls"]
 	path = examples/shared/dtls/mbedtls
-	url = https://github.com/ARMmbed/mbedtls
+	url = https://github.com/tusharkhandelwal2/mbedtls.git
